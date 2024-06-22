@@ -1,151 +1,244 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <numeric>
 #include "include/ONNXRunner.h"
+#include <algorithm>
+#include <iostream>
+#include <numeric>
+#include <vector>
 
-namespace boltONNXRunner{
+namespace compilerONNXRunner {
 
-Ort::Value ONNXRunner::getInputValueFloat(Ort::Session *session, 
+Ort::Value ONNXRunner::getInputValueFloat(Ort::Session *session,
                                           std::vector<float> &input,
-                                          int inputIdx) {
-    auto typeInfo = session->GetInputTypeInfo(inputIdx);
-    auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
-    auto inputDims = tensorInfo.GetShape();
-    std::replace_if(
-        inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
+                                          int inputIdx, int batchSize) {
+  auto typeInfo = session->GetInputTypeInfo(inputIdx);
+  auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
+  auto inputDims = tensorInfo.GetShape();
+  std::replace_if(
+      inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
 
-    size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
-                                             1, std::multiplies<int>());
-    auto memory_info =
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-    auto inputTmp = Ort::Value::CreateTensor<float>(
-        memory_info, input.data(), inputTensorSize, inputDims.data(),
-        inputDims.size());
-    auto inputTensor = &inputTmp;
-    return inputTmp;
+  size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
+                                           1, std::multiplies<int>());
+  // try to add batch size
+  inputDims[0] = batchSize;
+  inputTensorSize = inputTensorSize * batchSize;
+  auto memoryInfo =
+      Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  auto inputTmp =
+      Ort::Value::CreateTensor<float>(memoryInfo, input.data(), inputTensorSize,
+                                      inputDims.data(), inputDims.size());
+  auto inputTensor = &inputTmp;
+  return inputTmp;
 }
 
-Ort::Value ONNXRunner::getInputValueString(Ort::AllocatorWithDefaultOptions allocator,
-                                           Ort::Session *session, 
-                                           std::vector<std::string> &input,
-                                           int inputIdx) {
-    auto typeInfo = session->GetInputTypeInfo(inputIdx);
-    auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
-    auto inputDims = tensorInfo.GetShape();
+Ort::Value ONNXRunner::getInputValueString(
+    Ort::AllocatorWithDefaultOptions allocator, Ort::Session *session,
+    std::vector<std::string> &input, int inputIdx, int batchSize) {
+  auto typeInfo = session->GetInputTypeInfo(inputIdx);
+  auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
+  auto inputDims = tensorInfo.GetShape();
 
-    std::replace_if(
-        inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
+  std::replace_if(
+      inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
 
-    size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
-                                             1, std::multiplies<int>());
-    const char* input_strings[inputTensorSize];
-    for(int i = 0; i < inputTensorSize; i++) {
-        input_strings[i] = input[i].c_str();
-    }
+  size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
+                                           1, std::multiplies<int>());
+  inputDims[0] = batchSize;
+  inputTensorSize = inputTensorSize * batchSize;
+  const char *inputStrings[inputTensorSize];
+  for (int i = 0; i < inputTensorSize; i++) {
+    inputStrings[i] = input[i].c_str();
+  }
 
-    auto memory_info =
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-    auto inputTmp = Ort::Value::CreateTensor(allocator, inputDims.data(), 
-                                                 inputDims.size(), 
-                                                 ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
-    inputTmp.FillStringTensor(input_strings, inputTensorSize);
-    auto inputTensor = &inputTmp;
-    return inputTmp;
+  auto memoryInfo =
+      Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  auto inputTmp =
+      Ort::Value::CreateTensor(allocator, inputDims.data(), inputDims.size(),
+                               ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
+  inputTmp.FillStringTensor(inputStrings, inputTensorSize);
+  auto inputTensor = &inputTmp;
+  return inputTmp;
 }
 
-Ort::Value ONNXRunner::getInputValueInt64(Ort::Session *session, 
+Ort::Value ONNXRunner::getInputValueInt64(Ort::Session *session,
                                           std::vector<int64_t> &input,
-                                          int inputIdx) {
-    auto typeInfo = session->GetInputTypeInfo(inputIdx);
-    auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
-    auto inputDims = tensorInfo.GetShape();
-    std::replace_if(
-        inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
+                                          int inputIdx, int batchSize) {
+  auto typeInfo = session->GetInputTypeInfo(inputIdx);
+  auto tensorInfo = typeInfo.GetTensorTypeAndShapeInfo();
+  auto inputDims = tensorInfo.GetShape();
+  std::replace_if(
+      inputDims.begin(), inputDims.end(), [](int64_t &i) { return i < 0; }, 1);
 
-    size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
-                                             1, std::multiplies<int>());
-    auto memory_info =
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-    auto inputTmp = Ort::Value::CreateTensor<int64_t>(
-        memory_info, input.data(), inputTensorSize, inputDims.data(),
-        inputDims.size());
-    auto inputTensor = &inputTmp;
-    return inputTmp;
+  size_t inputTensorSize = std::accumulate(inputDims.begin(), inputDims.end(),
+                                           1, std::multiplies<int>());
+  inputDims[0] = batchSize;
+  inputTensorSize = inputTensorSize * batchSize;
+  auto memoryInfo =
+      Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  auto inputTmp = Ort::Value::CreateTensor<int64_t>(
+      memoryInfo, input.data(), inputTensorSize, inputDims.data(),
+      inputDims.size());
+  auto inputTensor = &inputTmp;
+  return inputTmp;
 }
 
-float ONNXRunner::runONNXModel(std::vector<std::string> input_string, std::vector<int64_t> input_int64, std::vector<float> input_float){
-    Ort::AllocatorWithDefaultOptions allocator;
+std::vector<float>
+ONNXRunner::runONNXModel(std::vector<std::string> inputString,
+                         std::vector<int64_t> inputInt64,
+                         std::vector<float> inputFloat, int batchSize) {
+  Ort::AllocatorWithDefaultOptions allocator;
 
-    //Try to get input;
-    int input_count = session->GetInputCount();
+  // Get input count
+  int inputCount = session->GetInputCount();
 
-    //Get input name
-    std::vector<std::string> inputNameList;
-    for (int i = 0; i < input_count; i++) {
-        auto inputName = session->GetInputNameAllocated(i, allocator);
-        auto inputNameStr = inputName.get();
-        inputNameList.push_back(inputNameStr);
+  // Get input name
+  std::vector<std::string> inputNameList;
+  for (int i = 0; i < inputCount; i++) {
+    auto inputName = session->GetInputNameAllocated(i, allocator);
+    auto inputNameStr = inputName.get();
+    inputNameList.push_back(inputNameStr);
+  }
+
+  // Form input tensor(s)
+  std::vector<Ort::Value> inputFinal;
+  std::vector<const char *> inputNameStrFinal;
+  int currentIdx = 0;
+  if (!inputString.empty()) {
+    inputFinal.push_back(getInputValueString(allocator, session, inputString,
+                                             currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  if (!inputInt64.empty()) {
+    inputFinal.push_back(
+        getInputValueInt64(session, inputInt64, currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  if (!inputFloat.empty()) {
+    inputFinal.push_back(
+        getInputValueFloat(session, inputFloat, currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  for (int i = 0; i < inputCount; i++) {
+    inputNameStrFinal.push_back(inputNameList[i].c_str());
+  }
+
+  // Run model
+  int outputCount = session->GetOutputCount();
+  std::vector<std::string> outputNameList;
+  for (int i = 0; i < outputCount; i++) {
+    auto outputName = session->GetOutputNameAllocated(i, allocator);
+    std::string outputNameStr = outputName.get();
+    if (!outputNameStr.empty()) {
+      outputNameList.push_back(outputNameStr);
+    } else {
+      std::string outputNameDefault = "Output_" + std::to_string(i);
+      outputNameList.push_back(outputNameDefault);
     }
-    
-    //Form input tensor(s)
-    std::vector<Ort::Value> input_final;
-    std::vector<const char *> inputNameStr_final;
+  }
 
-    int currentIdx = 0;
-    if(!input_string.empty()) {
-        input_final.push_back(getInputValueString(allocator, session, input_string, currentIdx));
-        currentIdx ++;
-    }
+  std::vector<const char *> outputNameStrFinal;
+  for (int i = 0; i < outputCount; i++) {
+    outputNameStrFinal.push_back(outputNameList[i].c_str());
+  }
 
-    if(!input_int64.empty()) {
-        input_final.push_back(getInputValueInt64(session, input_int64, currentIdx));
-        currentIdx ++;
-    }
+  auto outputTensors = session->Run(
+      Ort::RunOptions{nullptr}, inputNameStrFinal.data(), inputFinal.data(),
+      inputCount, outputNameStrFinal.data(), outputCount);
 
-    if(!input_float.empty()) {
-        input_final.push_back(getInputValueFloat(session, input_float, currentIdx));
-        currentIdx ++;
-    }
+  // Get result and return
+  std::vector<float> probs;
+  float *outputProbability = outputTensors[0].GetTensorMutableData<float>();
+  for (int i = 0; i < batchSize; i++) {
+    Ort::Value mapOut =
+        outputTensors[1].GetValue(static_cast<int>(i), allocator);
+    Ort::Value keysOrt = mapOut.GetValue(0, allocator);
+    int64_t *keysRet = keysOrt.GetTensorMutableData<int64_t>();
+    Ort::Value valuesOrt = mapOut.GetValue(1, allocator);
+    float *valuesRet = valuesOrt.GetTensorMutableData<float>();
+    probs.push_back((*(valuesRet + 1)));
+  }
 
-    for (int i = 0; i < input_count; i++) {
-        inputNameStr_final.push_back(inputNameList[i].c_str()); 
-    }
-
-    //Run the model
-    int  output_count = session->GetOutputCount();
-    std::vector<std::string> outputNameList;
-    for (int i = 0; i < output_count; i++) {
-        auto outputName = session->GetOutputNameAllocated(i, allocator);
-        std::string outputNameStr = outputName.get();
-        if(!outputNameStr.empty()) {
-            outputNameList.push_back(outputNameStr); 
-        } else {
-            std::string outputNameDefault = "Output_" + std::to_string(i);
-            outputNameList.push_back(outputNameDefault); 
-        }
-    }
-
-    std::vector<const char *> outputNameStr_final;
-    for(int i = 0; i < output_count; i++) {
-        outputNameStr_final.push_back(outputNameList[i].c_str());
-    }
-    
-    auto outputTensors =
-      session->Run(Ort::RunOptions{nullptr}, inputNameStr_final.data(),
-                   input_final.data(), input_count, outputNameStr_final.data(), output_count);
-
-    //Try to get the result & return
-    float* output_probability = outputTensors[0].GetTensorMutableData<float>();
-    Ort::Value map_out = outputTensors[1].GetValue(static_cast<int>(0), allocator);
-
-    Ort::Value keys_ort = map_out.GetValue(0, allocator);
-    int64_t* keys_ret = keys_ort.GetTensorMutableData<int64_t>();
-    Ort::Value values_ort = map_out.GetValue(1, allocator);
-    float* values_ret = values_ort.GetTensorMutableData<float>();
-
-    return *(values_ret + 1);
+  return probs;
 }
 
-} // namespace boltONNXRunner
+int64_t ONNXRunner::runONNXModelOptimizer(std::vector<std::string> inputString,
+                                          std::vector<int64_t> inputInt64,
+                                          std::vector<float> inputFloat,
+                                          int batchSize) {
+  Ort::AllocatorWithDefaultOptions allocator;
 
+  // Get input count
+  int inputCount = session->GetInputCount();
+  std::vector<int64_t> inputInt64Tensor(FEATURE_SIZE_INT64_OPT);
+  std::vector<std::string> inputStringTensor;
+  std::vector<Ort::Value> inputFinal;
+
+  inputInt64.clear();
+  inputInt64.resize(FEATURE_SIZE_INT64_OPT);
+  for (int i = 0; i < FEATURE_SIZE_INT64_OPT; i++) {
+    auto inputName = session->GetInputNameAllocated(i, allocator);
+    auto inputNameStr = inputName.get();
+
+    inputInt64Tensor.clear();
+    inputInt64Tensor.push_back(inputInt64[i]);
+    inputFinal.push_back(
+        getInputValueInt64(session, inputInt64Tensor, i, batchSize));
+  }
+
+  for (int i = FEATURE_SIZE_INT64_OPT;
+       i < FEATURE_SIZE_INT64_OPT + FEATURE_SIZE_STRING_OPT; i++) {
+    inputStringTensor.clear();
+    inputStringTensor.push_back(inputString[i - FEATURE_SIZE_INT64_OPT]);
+    inputFinal.push_back(getInputValueString(allocator, session,
+                                             inputStringTensor, i, batchSize));
+  }
+
+  // Get input name from model
+  std::vector<std::string> inputNameList;
+  for (int i = 0; i < inputCount; i++) {
+    auto inputName = session->GetInputNameAllocated(i, allocator);
+    auto inputNameStr = inputName.get();
+    inputNameList.push_back(inputNameStr);
+  }
+
+  // Form input tensor(s)
+  std::vector<const char *> inputNameStrFinal;
+  for (int i = 0; i < inputCount; i++) {
+    inputNameStrFinal.push_back(inputNameList[i].c_str());
+  }
+
+  // Run model
+  int outputCount = session->GetOutputCount();
+  std::vector<std::string> outputNameList;
+  for (int i = 0; i < outputCount; i++) {
+    auto outputName = session->GetOutputNameAllocated(i, allocator);
+    std::string outputNameStr = outputName.get();
+    if (!outputNameStr.empty()) {
+      outputNameList.push_back(outputNameStr);
+    } else {
+      std::string outputNameDefault = "Output_" + std::to_string(i);
+      outputNameList.push_back(outputNameDefault);
+    }
+  }
+
+  std::vector<const char *> outputNameStrFinal;
+  for (int i = 0; i < outputCount; i++) {
+    outputNameStrFinal.push_back(outputNameList[i].c_str());
+  }
+
+  auto outputTensors = session->Run(
+      Ort::RunOptions{nullptr}, inputNameStrFinal.data(), inputFinal.data(),
+      inputCount, outputNameStrFinal.data(), outputCount);
+
+  // Get result and return
+  int64_t label = 0;
+  for (int i = 0; i < batchSize; i++) {
+    int64_t *outputLabel = outputTensors[0].GetTensorMutableData<int64_t>();
+    label = *outputLabel;
+  }
+
+  return label;
+}
+
+} // namespace compilerONNXRunner
