@@ -170,20 +170,14 @@ int64_t ONNXRunner::runONNXModelOptimizer(std::vector<std::string> inputString,
 
   // Get input count
   int inputCount = session->GetInputCount();
-  std::vector<int64_t> inputInt64Tensor(FEATURE_SIZE_INT64_OPT);
+  std::vector<std::vector<int64_t>> inputInt64Tensors(FEATURE_SIZE_INT64_OPT);
   std::vector<std::string> inputStringTensor;
   std::vector<Ort::Value> inputFinal;
 
-  inputInt64.clear();
-  inputInt64.resize(FEATURE_SIZE_INT64_OPT);
   for (int i = 0; i < FEATURE_SIZE_INT64_OPT; i++) {
-    auto inputName = session->GetInputNameAllocated(i, allocator);
-    auto inputNameStr = inputName.get();
-
-    inputInt64Tensor.clear();
-    inputInt64Tensor.push_back(inputInt64[i]);
+    inputInt64Tensors[i].push_back(inputInt64[i]);
     inputFinal.push_back(
-        getInputValueInt64(session, inputInt64Tensor, i, batchSize));
+        getInputValueInt64(session, inputInt64Tensors[i], i, batchSize));
   }
 
   for (int i = FEATURE_SIZE_INT64_OPT;
