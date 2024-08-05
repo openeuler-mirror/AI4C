@@ -7,15 +7,17 @@ else ()
     if (onnxruntime_USE_ACL)
         FetchContent_Declare(
             eigen
-            URL ${DEP_URL_eigen}
-            URL_HASH SHA1=${DEP_SHA1_eigen}
-            PATCH_COMMAND ${Patch_EXECUTABLE} --ignore-space-change --ignore-whitespace < ${PROJECT_SOURCE_DIR}/patches/eigen/Fix_Eigen_Build_Break.patch
+# Stop populating content from external project.
+#            URL ${DEP_URL_eigen}
+#            URL_HASH SHA1=${DEP_SHA1_eigen}
+#            PATCH_COMMAND ${Patch_EXECUTABLE} --ignore-space-change --ignore-whitespace < ${PROJECT_SOURCE_DIR}/patches/eigen/Fix_Eigen_Build_Break.patch
         )
     else()
         FetchContent_Declare(
             eigen
-            URL ${DEP_URL_eigen}
-            URL_HASH SHA1=${DEP_SHA1_eigen}
+# Stop populating content from external project.
+#            URL ${DEP_URL_eigen}
+#            URL_HASH SHA1=${DEP_SHA1_eigen}
         )
     endif()
     FetchContent_Populate(eigen)

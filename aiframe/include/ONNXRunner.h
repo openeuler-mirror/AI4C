@@ -4,9 +4,9 @@
 #include "onnxruntime_c_api.h"
 #include "onnxruntime_cxx_api.h"
 #include <algorithm>
-#include <fstream>
+#include <cstdlib>
+#include <filesystem>
 #include <iomanip>
-#include <iostream>
 #include <numeric>
 #include <openssl/sha.h>
 #include <sstream>
@@ -16,7 +16,6 @@
 extern "C" {
 namespace compilerONNXRunner {
 
-const char* MODEL_PATH_OPT = "/usr/lib64/AI4C/optimizer.onnx";
 const int FEATURE_SIZE_INT64_OPT = 6;
 const int FEATURE_SIZE_STRING_OPT = 11;
 
@@ -57,8 +56,8 @@ private:
 };
 
 extern ONNXRunner *createONNXRunner(const char *modelPath) {
-  std::ifstream file(modelPath);
-  if (file.good()) {
+  std::filesystem::path filePath(modelPath);
+  if (std::filesystem::exists(filePath)) {
     return new ONNXRunner(modelPath);
   } else {
     return nullptr;
@@ -188,11 +187,46 @@ static void preprocessData(std::vector<std::string> &inputString,
   }
 }
 
+static bool findOptimizerModelPath(const std::string &modelRelPath,
+                                   std::string &optModelPath,
+                                   const char *envName = "LD_LIBRARY_PATH") {
+
+  const char *paths = std::getenv(envName);
+  std::istringstream envPaths{paths ? paths : ""};
+  std::vector<std::string> modelPathList;
+
+  // Split environment variables and concatenate complete model paths.
+  std::string modelPath;
+  while (std::getline(envPaths, modelPath, ':')) {
+    if (modelPath[modelPath.size() - 1] != '/') {
+      modelPath += '/';
+    }
+    modelPath += modelRelPath;
+    modelPathList.push_back(modelPath);
+  }
+
+  for (const auto &modelPath : modelPathList) {
+    std::filesystem::path filePath(modelPath);
+    if (std::filesystem::exists(filePath)) {
+      optModelPath = modelPath;
+      return true;
+    }
+  }
+  return false;
+}
+
 extern int64_t runONNXModelOptimizer(int argcSW, const char **argvSW,
                                      const char *mcpuOption, int argcHW,
                                      int64_t *argvHW) {
   // Create model runner.
-  ONNXRunner *instance = createONNXRunner(MODEL_PATH_OPT);
+  std::string optModelPath;
+  std::string modelRelPath = "AI4C/optimizer.onnx";
+  const char *envName = "LD_LIBRARY_PATH";
+  if (!findOptimizerModelPath(modelRelPath, optModelPath, envName)) {
+    return -1;
+  }
+
+  ONNXRunner *instance = createONNXRunner(optModelPath.c_str());
   if (instance == nullptr) {
     return -1;
   }

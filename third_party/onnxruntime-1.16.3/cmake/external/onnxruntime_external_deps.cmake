@@ -163,10 +163,11 @@ else()
 endif()
 FetchContent_Declare(
   Protobuf
+# Stop populating content from external project.
 #  URL ${DEP_URL_protobuf}
 #  URL_HASH SHA1=${DEP_SHA1_protobuf}
 #  PATCH_COMMAND ${ONNXRUNTIME_PROTOBUF_PATCH_COMMAND}
-  FIND_PACKAGE_ARGS 3.21.12 NAMES Protobuf
+#  FIND_PACKAGE_ARGS 3.21.12 NAMES Protobuf
 )
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "Build protobuf tests" FORCE)
 if (CMAKE_SYSTEM_NAME STREQUAL "Android")
