@@ -234,4 +234,85 @@ int64_t ONNXRunner::runONNXModelOptimizer(std::vector<std::string> inputString,
   return label;
 }
 
+int64_t ONNXRunner::runONNXModelLTO (std::vector<std::string> inputString,
+                                     std::vector<int64_t> inputInt64,
+                                     std::vector<float> inputFloat,
+                                     int batchSize) {
+  
+  Ort::AllocatorWithDefaultOptions allocator;
+
+  int size = inputString.size();
+    
+  // Get input count
+  int inputCount = session->GetInputCount();
+  std::vector<std::vector<int64_t>> inputInt64Tensors(FEATURE_SIZE_INT64_OPT);
+  std::vector<std::string> inputStringTensor;
+
+   // Get input name
+  std::vector<std::string> inputNameList;
+  for (int i = 0; i < inputCount; i++) {
+    auto inputName = session->GetInputNameAllocated(i, allocator);
+    auto inputNameStr = inputName.get();
+    inputNameList.push_back(inputNameStr);
+  }
+
+  // Form input tensor(s)
+  std::vector<Ort::Value> inputFinal;
+  std::vector<const char *> inputNameStrFinal;
+  int currentIdx = 0;
+  if (!inputString.empty()) {
+    inputFinal.push_back(getInputValueString(allocator, session, inputString,
+                                             currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  if (!inputInt64.empty()) {
+    inputFinal.push_back(
+        getInputValueInt64(session, inputInt64, currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  if (!inputFloat.empty()) {
+    inputFinal.push_back(
+        getInputValueFloat(session, inputFloat, currentIdx, batchSize));
+    currentIdx++;
+  }
+
+  for (int i = 0; i < inputCount; i++) {
+    inputNameStrFinal.push_back(inputNameList[i].c_str());
+  }
+
+  // Run model
+  int outputCount = session->GetOutputCount();
+  std::vector<std::string> outputNameList;
+  for (int i = 0; i < outputCount; i++) {
+    auto outputName = session->GetOutputNameAllocated(i, allocator);
+    std::string outputNameStr = outputName.get();
+    if (!outputNameStr.empty()) {
+      outputNameList.push_back(outputNameStr);
+    } else {
+      std::string outputNameDefault = "Output_" + std::to_string(i);
+      outputNameList.push_back(outputNameDefault);
+    }
+  }
+
+  std::vector<const char *> outputNameStrFinal;
+  for (int i = 0; i < outputCount; i++) {
+    outputNameStrFinal.push_back(outputNameList[i].c_str());
+  }
+
+  auto outputTensors = session->Run(
+    Ort::RunOptions{nullptr}, inputNameStrFinal.data(), inputFinal.data(),
+    inputCount, outputNameStrFinal.data(), outputCount);
+  
+  int64_t label = 0;
+  for (int i = 0; i < batchSize; i++) {
+    int64_t *outputLabel = outputTensors[0].GetTensorMutableData<int64_t>();
+    label = *outputLabel;
+  }
+
+  return label;
+}
+
+
 } // namespace compilerONNXRunner
