@@ -1501,7 +1501,7 @@ static void D2DInterop() {
   winrt::com_ptr<IDirect3DDxgiInterfaceAccess> dxgiInterfaceAccess =
     frame.Direct3DSurface().as<IDirect3DDxgiInterfaceAccess>();
   WINML_EXPECT_HRESULT_SUCCEEDED(dxgiInterfaceAccess->GetInterface(__uuidof(IDXGISurface), dxgiSurface.put_void()));
-  // and try and use our surface to create a render targer
+  // and try and use our surface to create a render target
   winrt::com_ptr<ID2D1RenderTarget> renderTarget;
   D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties();
   props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);

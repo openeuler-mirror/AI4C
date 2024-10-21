@@ -25,7 +25,7 @@ To make image related tests data driven and increase test code coverage.
 * CPU
 
 ### 2. Evaluation Strategy
-> The strategy to use during evalution.
+> The strategy to use during evaluation.
 
 * EvalutateAsync
 * EvaluateSync
