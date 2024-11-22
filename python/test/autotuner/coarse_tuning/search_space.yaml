@@ -1,0 +1,39 @@
+CodeRegion:
+  CodeRegionType: module
+  Pass: none
+  Args:
+    lm:
+      Type: bool
+---
+CodeRegion:
+  CodeRegionType: function
+  Pass: coarse_option_generate
+  Args:
+    flag_prefetch_loop_arrays:
+      Type: bool
+    param_prefetch_latency:
+      Min: 100
+      Max: 2000
+      Type: int
+    param_simultaneous_prefetches:
+      Min: 1
+      Max: 80
+      Type: int
+---
+CodeRegion:
+  CodeRegionType: function
+  Pass: aprefetch
+  Args:
+    param_min_insn_to_prefetch_ratio:
+      Min: 1
+      Max: 30
+      Type: int
+---
+CodeRegion:
+  CodeRegionType: function
+  Pass: aprefetch
+  Args:
+    param_prefetch_min_insn_to_mem_ratio:
+      Min: 1
+      Max: 30
+      Type: int
