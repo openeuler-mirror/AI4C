@@ -1,0 +1,67 @@
+required_config:
+- -O2
+bool_config:
+- -O3
+- -funroll-loops
+- -fprefetch-loop-arrays
+# - -fsimdmath
+# - -flto
+interval_config:
+- name: --param max-inline-insns-auto
+  default: 15
+  min: 10
+  max: 190
+- name: --param inline-unit-growth
+  default: 40
+  min: 30
+  max: 300
+- name: --param max-inline-recursive-depth-auto
+  default: 8
+  min: 4
+  max: 8
+- name: --param large-function-insns
+  default: 2700
+  min: 1100
+  max: 3100
+- name: --param large-function-growth
+  default: 100
+  min: 20
+  max: 100
+- name: --param large-unit-insns
+  default: 10000
+  min: 6000
+  max: 16000
+- name: --param max-unrolled-insns
+  default: 200
+  min: 100
+  max: 2000
+- name: --param max-average-unrolled-insns
+  default: 80
+  min: 10
+  max: 800
+- name: --param max-unroll-times
+  default: 8
+  min: 1
+  max: 64
+- name: --param prefetch-latency
+  default: 200
+  min: 100
+  max: 2000
+- name: --param simultaneous-prefetches
+  default: 3
+  min: 1
+  max: 80
+- name: --param min-insn-to-prefetch-ratio
+  default: 9
+  min: 1
+  max: 30
+- name: --param prefetch-min-insn-to-mem-ratio
+  default: 3
+  min: 1
+  max: 30
+enum_config:
+# - name: -fvect-cost-model
+#   options:
+#     - unlimited
+#     - dynamic
+#     - cheap

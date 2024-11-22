@@ -1,0 +1,10 @@
+config_measure:
+- name: measure1
+  weight: 1
+  optim: maximize
+- name: measure2
+  weight: 1
+  optim: maximize
+- name: measure3
+  weight: 1
+  optim: minimize
