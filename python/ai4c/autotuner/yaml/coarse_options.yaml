@@ -1,0 +1,188 @@
+Library:
+  - Name: lm
+    Type: Bool
+  - Name: lmathlib
+    Type: Bool
+Arch:
+  - Name: mtune
+    Type: Enum
+    Value:
+      - hip09
+      - tsv110
+      - native
+      - generic
+Generic:
+  - Name: O2
+    Type: Bool
+  - Name: flto
+    Type: Bool
+  - Name: fvect-cost-model
+    Type: Enum
+    Value:
+      - unlimited
+      - dynamic
+      - cheap
+      - very-cheap
+  - Name: freorder-function
+    Type: Bool
+  - Name: freorder-blocks-algorithm
+    Type: Enum
+    Value:
+      - simple
+      - stc
+  - Name: fipa-profile
+    Type: Bool
+    Default: 0
+  - Name: fipa-cp
+    Type: Bool
+    EnabledBy: O2
+IPA:
+  - Name: fipa-icf
+    Type: Bool
+GIMPLE:
+  - Name: ftree-vrp
+    Repr: flag_tree_vrp
+    Type: Bool
+    Default: 0
+    Pass: evrp, vrp
+  - Name: finline-small-functions
+    Repr: flag_inline_small_functions
+    Type: Bool
+    Pass: einline
+  - Name: ftree-tail-merge
+    Repr: flag_tree_tail_merge
+    Type: Bool
+    Pass: pre
+    Dependency: ftree-pre
+  - Name: ftree-slp-vectorize
+    Repr: flag_tree_slp_vectorize
+    Type: Bool
+    Pass: slp
+    EnabledBy: ftree-vectorize
+  - Name: ftree-pre
+    Repr: flag_tree_pre
+    Type: Bool
+    Pass: pre
+  - Name: ftree-builtin-call-dce
+    Repr: flag_tree_builtin_call_dce
+    Type: Bool
+    Default: 0
+    Pass: cdce
+  - Name: ffinite-loops
+    Repr: flag_finite_loops
+    Type: Bool
+    Default: 0
+    Pass: cfg
+  - Name: foptimize-sibling-calls
+    Repr: flag_optimize_sibling_calls
+    Type: Bool
+    Pass: tailr
+  - Name: fprefetch-loop-arrays
+    Repr: flag_prefetch_loop_arrays
+    Type: Bool
+    Pass: aprefetch
+RTL:
+  - Name: fschedule-insns
+    Repr: flag_schedule_insns
+    Type: Bool
+    Pass: ira, sched1
+  - Name: fschedule-insns2
+    Repr: flag_schedule_insns_after_reload
+    Type: Bool
+    Pass: split3, sched2
+  - Name: funroll-loops
+    Repr: flag_unroll_loops
+    Type: Bool
+    Pass: loop2
+PARAM:
+  - Name: max-inline-insns-auto
+    Repr: param_max_inline_insns_auto
+    Type: Uint
+    Default: 15
+    Min: 10
+    Max: 190
+    Pass: (GIMPLE) fnsplit, einline, (IPA) inline, cp
+  - Name: inline-unit-growth
+    Repr: param_inline_unit_growth
+    Type: Uint
+    Default: 40
+    Min: 30
+    Max: 300
+    Pass: (IPA) inline
+  - Name: max-inline-recursive-depth-auto
+    Repr: param_max_inline_recursive_depth_auto
+    Type: Uint
+    Default: 8
+    Min: 4
+    Max: 8
+    Pass: (IPA) inline
+  - Name: large-function-insns
+    Repr: param_large_function_insns
+    Type: Uint
+    Default: 2700
+    Min: 1100
+    Max: 3100
+    Pass: (GIMPLE) einline, (IPA) inline
+  - Name: large-function-growth
+    Repr: param_large_function_insns
+    Type: Uint
+    Default: 100
+    Min: 20
+    Max: 100
+    Pass: (GIMPLE) einline, (IPA) inline
+  - Name: large-unit-insns
+    Repr: param_large_unit_insns
+    Type: Uint
+    Default: 10000
+    Min: 6000
+    Max: 16000
+    Pass: (IPA) inline
+  - Name: max-unrolled-insns
+    Repr: param_max_unrolled_insns
+    Type: Uint
+    Default: 200
+    Min: 100
+    Max: 2000
+    Pass: (GIMPLE) unrolljam, pcom, (RTL) loop2
+  - Name: max-average-unrolled-insns
+    Repr: param_max_average_unrolled_insns
+    Type: Uint
+    Default: 80
+    Min: 10
+    Max: 800
+    Pass: (RTL) loop2
+  - Name: max-unroll-times
+    Repr: param_max_unroll_times
+    Type: Uint
+    Default: 8
+    Min: 1
+    Max: 64
+    Pass: (GIMPLE) pcom, (RTL) loop2
+  - Name: prefetch-latency
+    Repr: param_prefetch_latency
+    Type: Uint
+    Default: 200
+    Min: 100
+    Max: 2000
+    Pass: (GIMPLE) aprefetch
+  - Name: simultaneous-prefetches
+    Repr: param_simultaneous_prefetches
+    Type: Uint
+    Default: 3
+    Min: 1
+    Max: 80
+    Pass: (GIMPLE) aprefetch
+  - Name: min-insn-to-prefetch-ratio
+    Repr: param_min_insn_to_prefetch_ratio
+    Type: Uint
+    Default: 9
+    Min: 1
+    Max: 30
+    Pass: (GIMPLE) aprefetch
+  - Name: prefetch-min-insn-to-mem-ratio
+    Repr: param_prefetch_min_insn_to_mem_ratio
+    Type: Uint
+    Default: 3
+    Min: 1
+    Max: 30
+    Pass: (GIMPLE) aprefetch
