@@ -1,12 +1,12 @@
-#ifndef AI4C_GCC_INSN_UTILS_H
-#define AI4C_GCC_INSN_UTILS_H
+#ifndef AI4C_GCC_INSN_UTILS_AARCH64_H
+#define AI4C_GCC_INSN_UTILS_AARCH64_H
 #include "basic-block.h"
 #include "insn-attr.h"
 
 namespace ai4c {
 
-// TODO: Only very few SVE/SVE2 instructions are with attribute types.
-// TODO: attribute possible: SIGNED/UNSIGNED
+// NEXT: Only very few SVE/SVE2 instructions are with attribute types.
+// NEXT: attribute possible: SIGNED/UNSIGNED
 
 enum precision {
   P_UNK,
@@ -119,7 +119,7 @@ static std::vector<struct insn_attr_type> iat_table = {
     {TYPE_F_MCR, P_UNK, MEMORY, FP, BASE, MOV, AT_UNK},
     {TYPE_F_MCRR, P_UNK, MEMORY, FP, BASE, MOV, AT_UNK},
     {TYPE_F_MINMAXD, DOUBLE, COMPUTE, FP, BASE, FP_ARITH,
-     MINMAX}, /* TODO: how to distinguish MINMAX and CSEL (memory/compute,
+     MINMAX}, /* NEXT: how to distinguish MINMAX and CSEL (memory/compute,
                  mov/arith) */
     {TYPE_F_MINMAXS, SINGLE, COMPUTE, FP, BASE, FP_ARITH, MINMAX},
     {TYPE_F_MRC, P_UNK, MEMORY, FP, BASE, MOV, AT_UNK},
@@ -727,4 +727,4 @@ static bool is_ret_op(rtx_insn* insn) {
 }
 
 }  // namespace ai4c
-#endif  // AI4C_GCC_INSN_UTILS_H
+#endif  // AI4C_GCC_INSN_UTILS_AARCH64_H

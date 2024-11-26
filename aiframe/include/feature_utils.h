@@ -13,9 +13,12 @@
 
 #include "basic-block.h"
 #include "gcc-plugin.h"
-#include "insn-attr.h"
-#include "insn_utils.h"
 #include "plugin_utils.h"
+#ifdef __aarch64__
+#include "insn_utils_aarch64.h"
+#else
+#include "insn_utils_x86_64.h"
+#endif
 
 namespace ai4c {
 
@@ -24,15 +27,13 @@ class RTXInsnUtil {
   RTXInsnUtil(rtx_insn* insn) : insn_(insn) {}
   virtual ~RTXInsnUtil() = default;
 
-  enum attr_type get_insn_type() { return get_attr_type(insn_); }
-
  private:
   rtx_insn* insn_;
 };
 
 class LoopUtil {
  public:
-  LoopUtil(loop* loop_) : loop_(loop_) {}
+  LoopUtil(class loop* loop_) : loop_(loop_) {}
 
   virtual ~LoopUtil() = default;
 
@@ -77,7 +78,7 @@ class LoopUtil {
   }
 
  private:
-  loop* loop_;
+  class loop* loop_;
   int64_t bb_num_{0};
   int64_t fp_compute_num_{0};
   int64_t ld_insn_num_{0};
