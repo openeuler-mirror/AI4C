@@ -20,20 +20,19 @@ std::string config_path{};
 
 /* ===------------------------- Generate -------------------------=== */
 const pass_data manual_unroll_generate_pass_data = {
-  .type = RTL_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
-  .name = "manual_unroll_generate_pass",
-  .optinfo_flags = OPTGROUP_NONE,
-  .tv_id = TV_NONE,
-  .properties_required = PROP_gimple_any,
-  .properties_provided = 0,
-  .properties_destroyed = 0,
-  .todo_flags_start = 0,
-  .todo_flags_finish = 0
-};
+    .type = RTL_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
+    .name = "manual_unroll_generate_pass",
+    .optinfo_flags = OPTGROUP_NONE,
+    .tv_id = TV_NONE,
+    .properties_required = PROP_gimple_any,
+    .properties_provided = 0,
+    .properties_destroyed = 0,
+    .todo_flags_start = 0,
+    .todo_flags_finish = 0};
 
-struct manual_unroll_genreate_pass : rtl_opt_pass {
+struct manual_unroll_generate_pass : rtl_opt_pass {
  public:
-  manual_unroll_genreate_pass()
+  manual_unroll_generate_pass()
       : rtl_opt_pass(manual_unroll_generate_pass_data, g) {}
 
   virtual unsigned int execute(function* fun) override {
@@ -73,31 +72,30 @@ struct manual_unroll_genreate_pass : rtl_opt_pass {
     return 0;
   }
 
-  virtual manual_unroll_genreate_pass* clone() override { return this; }
+  virtual manual_unroll_generate_pass* clone() override { return this; }
 };
 
 struct register_pass_info manual_unroll_generate_passinfo {
-  .pass = new manual_unroll_genreate_pass(),
+  .pass = new manual_unroll_generate_pass(),
   .reference_pass_name = "loop2_unroll",
   // 0-each time call cfg-pass, plugin will be called
-  .ref_pass_instance_number = 0,
+      .ref_pass_instance_number = 0,
   // PASS_POS_INSERT_AFTER, PASS_POS_INSERT_BEFORE, PASS_POS_REPLACE
-  .pos_op = PASS_POS_INSERT_AFTER
+      .pos_op = PASS_POS_INSERT_AFTER
 };
 /* ===------------------------- Generate -------------------------=== */
 
 /* ===------------------------- Auto-Tuning -------------------------=== */
 const pass_data manual_unroll_pass_data = {
-  .type = RTL_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
-  .name = "manual_unroll_pass",
-  .optinfo_flags = OPTGROUP_NONE,
-  .tv_id = TV_NONE,
-  .properties_required = PROP_gimple_any,
-  .properties_provided = 0,
-  .properties_destroyed = 0,
-  .todo_flags_start = 0,
-  .todo_flags_finish = 0
-};
+    .type = RTL_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
+    .name = "manual_unroll_pass",
+    .optinfo_flags = OPTGROUP_NONE,
+    .tv_id = TV_NONE,
+    .properties_required = PROP_gimple_any,
+    .properties_provided = 0,
+    .properties_destroyed = 0,
+    .todo_flags_start = 0,
+    .todo_flags_finish = 0};
 
 struct manual_unroll_pass : rtl_opt_pass {
  public:
@@ -120,10 +118,8 @@ struct manual_unroll_pass : rtl_opt_pass {
 };
 
 struct register_pass_info manual_unroll_passinfo {
-  .pass = new manual_unroll_pass(),
-  .reference_pass_name = "loop2_unroll",
-  .ref_pass_instance_number = 0,
-  .pos_op = PASS_POS_INSERT_BEFORE
+  .pass = new manual_unroll_pass(), .reference_pass_name = "loop2_unroll",
+  .ref_pass_instance_number = 0, .pos_op = PASS_POS_INSERT_BEFORE
 };
 /* ===------------------------- Auto-Tuning -------------------------=== */
 

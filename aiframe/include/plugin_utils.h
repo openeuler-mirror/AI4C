@@ -145,19 +145,19 @@ static void dump_autotuning(AutoTuning& auto_tuning, std::ofstream& out,
 
 static void dump_opp_yaml(std::string& yaml_file, AutoTuning& auto_tuning,
                           OptionManager& opt_mgr) {
-  std::ofstream out(yaml_file, std::ios::app | std::ios::out);
+  std::ofstream out(yaml_file, std::ios::app);
   if (!out.is_open()) {
     throw std::runtime_error("Can not open file: " + yaml_file);
   }
   out << "--- !AutoTuning\n";
   dump_autotuning(auto_tuning, out, opt_mgr);
   out << "...\n";
-  out.close();
+  // out.close();
 }
 
 /* Load YAML FILE */
 std::stringstream get_map_value(std::string& input, size_t start, size_t end) {
-  if (start == std::string::npos || end == std::string::npos || start > end) {
+  if (start == std::string::npos || end == std::string::npos || start >= end) {
     return {};
   }
   return std::stringstream(input.substr(start + 1, end - start - 1));
@@ -183,7 +183,14 @@ void parse_args(std::string& src, AutoTuning& auto_tuning) {
                   value.end());
       if (value.back() == '\'') value.pop_back();
       if (!value.empty() && value[0] == '\'') value.erase(value.begin());
-      auto_tuning.args[key] = std::stoi(value);
+
+      try {
+        auto_tuning.args[key] = std::stoi(value);
+      } catch (const std::invalid_argument& e) {
+        auto_tuning.args[key] = -1;
+      } catch (const std::out_of_range& e) {
+        auto_tuning.args[key] = -2;
+      }
     }
   }
 }
@@ -204,7 +211,14 @@ static int parse_tuning_info(std::string& input, AutoTuning& auto_tuning) {
       std::getline(ss, value, ',');
       value.erase(std::remove_if(value.begin(), value.end(), ::isspace),
                   value.end());
-      auto_tuning.code_region_hash = std::stoull(value);
+
+      try {
+        auto_tuning.code_region_hash = std::stoull(value);
+      } catch (const std::invalid_argument& e) {
+        auto_tuning.code_region_hash = -1;
+      } catch (const std::out_of_range& e) {
+        auto_tuning.code_region_hash = -2;
+      }
     } else {
       std::getline(ss, value, ',');
     }
@@ -214,11 +228,11 @@ static int parse_tuning_info(std::string& input, AutoTuning& auto_tuning) {
 
 static std::unordered_map<size_t, AutoTuning> AutoTuneOptions;
 
-static void load_config_yaml(std::string& config_file) {
+static int load_config_yaml(std::string& config_file) {
   std::ifstream configs(config_file, std::ios::in);
   if (!configs.is_open()) {
     std::cerr << "Error: " << config_file << std::endl;
-    return;
+    return 1;
   }
 
   std::string line;
@@ -232,6 +246,7 @@ static void load_config_yaml(std::string& config_file) {
     }
   }
   configs.close();
+  return 0;
 }
 }  // namespace ai4c
 

@@ -2,15 +2,16 @@
 
 namespace ai4c {
 
-ONNXRunner::ONNXRunner(const char* model_path) { loadModel(model_path); }
+ONNXRunner::ONNXRunner(const char* model_path) { load_model(model_path); }
 
 ONNXRunner::~ONNXRunner() {
   if (session) {
     delete session;
+    session = nullptr;
   }
 }
 
-void ONNXRunner::loadModel(const char* model_path) {
+void ONNXRunner::load_model(const char* model_path) {
   session_options.SetGraphOptimizationLevel(
       GraphOptimizationLevel::ORT_ENABLE_BASIC);
   session = new Ort::Session(env, model_path, session_options);
@@ -80,12 +81,32 @@ int ONNXRunner::add_double_input(double* data, int num) {
   ADD_INPUT_FEATURE(double)
 }
 int ONNXRunner::add_string_input(char** data, int num) {
-  int index = input_values_.size() - 1;
+  int index = input_values_.size();
+  std::string input_name =
+      session->GetInputNameAllocated(index, allocator).get();
+  input_names_.push_back(input_name);
   auto type_info = session->GetInputTypeInfo(index);
   auto shape_info = type_info.GetTensorTypeAndShapeInfo();
   auto shape = shape_info.GetShape();
   auto memory_info =
       Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+
+  int elements =
+      std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int>());
+  if (elements < 0) {
+    elements = -elements;
+    if (num % elements != 0) {
+      fprintf(stderr,
+              "input '%s' has invalid data size:"
+              " %d [%d]\n",
+              input_name.c_str(), num, elements);
+      return -1;
+    }
+    shape[0] = num / elements;
+  } else if (elements != num) {
+    fprintf(stderr, "input '%s' data size mismatch\n", input_name.c_str());
+    return -1;
+  }
 
   input_values_.push_back(
       Ort::Value::CreateTensor(allocator, shape.data(), shape.size(),
@@ -95,12 +116,21 @@ int ONNXRunner::add_string_input(char** data, int num) {
 }
 
 int32_t* ONNXRunner::get_int32_output(int index) {
+  if (index >= output_values_.size()) {
+    return nullptr;
+  }
   return output_values_[index].GetTensorMutableData<int32_t>();
 }
 int64_t* ONNXRunner::get_int64_output(int index) {
+  if (index >= output_values_.size()) {
+    return nullptr;
+  }
   return output_values_[index].GetTensorMutableData<int64_t>();
 }
 float* ONNXRunner::get_float_output(int index) {
+  if (index >= output_values_.size()) {
+    return nullptr;
+  }
   return output_values_[index].GetTensorMutableData<float>();
 }
 

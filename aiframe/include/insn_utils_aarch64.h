@@ -2,6 +2,9 @@
 #define AI4C_GCC_INSN_UTILS_AARCH64_H
 #include "basic-block.h"
 #include "insn-attr.h"
+#include "insn-codes.h"
+#include "insn-config.h"
+#include "recog.h"
 
 namespace ai4c {
 
@@ -610,6 +613,9 @@ static std::vector<struct insn_attr_type> iat_table = {
 static const int IAT_IDX_OFFSET = 0;
 
 static bool is_valid_insn_attr_type(rtx_insn* insn) {
+  unsigned recog = recog_memoized(insn);
+  if (recog >= NUM_INSN_CODES) return false;
+
   attr_type atype = get_attr_type(insn);
   if (atype - IAT_IDX_OFFSET < iat_table.size() &&
       iat_table[atype - IAT_IDX_OFFSET].name == atype) {

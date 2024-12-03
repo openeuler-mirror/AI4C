@@ -1,28 +1,69 @@
 #ifndef COMPILER_PROFILE_ONNXRUNNER_H
 #define COMPILER_PROFILE_ONNXRUNNER_H
 
-#include "onnxruntime_c_api.h"
-#include "onnxruntime_cxx_api.h"
+#include <openssl/evp.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <numeric>
-#include <openssl/evp.h>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <regex>
+
+#include "onnxruntime_c_api.h"
+#include "onnxruntime_cxx_api.h"
 
 extern "C" {
 namespace compilerONNXRunner {
 
 const int FEATURE_SIZE_INT64_OPT = 6;
 const int FEATURE_SIZE_STRING_OPT = 11;
-const char *ai_info = "7f454c460201010000000000000000000100b7000100000000000000000000000000000000000000a0020000000000000000000040000000000040000c000b00fd7bbea9fd030091000038d5e00f00f9e00f40f900fc58d3001c0012e01700b9e01740b91f20017140000054000000941f2003d5fd7bc2a8c0035fd6004743433a2028474e55292031302e332e3100001000000000000000017a520004781e011b0c1f002000000018000000000000003c00000000410e209d049e034ddedd0e0000000000000000000000000000000000000000000000000000000000000000010000000400f1ff000000000000000000000000000000000000000003000100000000000000000000000000000000000000000003000300000000000000000000000000000000000000000003000400000000000000000000000000000000000b00000000000100000000000000000000000000000000000000000003000600000000000000000000000000000000000e0000000000070014000000000000000000000000000000000000000300070000000000000000000000000000000000000000000300050000000000000000000000000000000000110000001200010000000000000000003c000000000000001d00000010000000000000000000000000000000000000000061695f696e666f2e63002478002464006765745f61695f696e666f0061626f72740000000000002c000000000000001b0100000b00000000000000000000001c0000000000000005010000020000000000000000000000002e73796d746162002e737472746162002e7368737472746162002e72656c612e74657874002e64617461002e627373002e636f6d6d656e74002e6e6f74652e474e552d737461636b002e72656c612e65685f6672616d6500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000010000000600000000000000000000000000000040000000000000003c000000000000000000000000000000040000000000000000000000000000001b0000000400000040000000000000000000000000000000100200000000000018000000000000000900000001000000080000000000000018000000000000002600000001000000030000000000000000000000000000007c0000000000000000000000000000000000000000000000010000000000000000000000000000002c00000008000000030000000000000000000000000000007c0000000000000000000000000000000000000000000000010000000000000000000000000000003100000001000000300000000000000000000000000000007c0000000000000013000000000000000000000000000000010000000000000001000000000000003a00000001000000000000000000000000000000000000008f0000000000000000000000000000000000000000000000010000000000000000000000000000004f0000000100000002000000000000000000000000000000900000000000000038000000000000000000000000000000080000000000000000000000000000004a000000040000004000000000000000000000000000000028020000000000001800000000000000090000000700000008000000000000001800000000000000010000000200000000000000000000000000000000000000c80000000000000020010000000000000a0000000a00000008000000000000001800000000000000090000000300000000000000000000000000000000000000e801000000000000230000000000000000000000000000000100000000000000000000000000000011000000030000000000000000000000000000000000000040020000000000005900000000000000000000000000000001000000000000000000000000000000";
+const char *ai_info =
+    "7f454c460201010000000000000000000100b7000100000000000000000000000000000000"
+    "000000a0020000000000000000000040000000000040000c000b00fd7bbea9fd0300910000"
+    "38d5e00f00f9e00f40f900fc58d3001c0012e01700b9e01740b91f20017140000054000000"
+    "941f2003d5fd7bc2a8c0035fd6004743433a2028474e55292031302e332e31000010000000"
+    "00000000017a520004781e011b0c1f002000000018000000000000003c00000000410e209d"
+    "049e034ddedd0e000000000000000000000000000000000000000000000000000000000000"
+    "0000010000000400f1ff000000000000000000000000000000000000000003000100000000"
+    "00000000000000000000000000000000000300030000000000000000000000000000000000"
+    "0000000003000400000000000000000000000000000000000b000000000001000000000000"
+    "00000000000000000000000000000003000600000000000000000000000000000000000e00"
+    "00000000070014000000000000000000000000000000000000000300070000000000000000"
+    "00000000000000000000000000030005000000000000000000000000000000000011000000"
+    "1200010000000000000000003c000000000000001d00000010000000000000000000000000"
+    "000000000000000061695f696e666f2e63002478002464006765745f61695f696e666f0061"
+    "626f72740000000000002c000000000000001b0100000b00000000000000000000001c0000"
+    "000000000005010000020000000000000000000000002e73796d746162002e737472746162"
+    "002e7368737472746162002e72656c612e74657874002e64617461002e627373002e636f6d"
+    "6d656e74002e6e6f74652e474e552d737461636b002e72656c612e65685f6672616d650000"
+    "00000000000000000000000000000000000000000000000000000000000000000000000000"
+    "00000000000000000000000000000000000000000000000000000000000000000020000000"
+    "010000000600000000000000000000000000000040000000000000003c0000000000000000"
+    "00000000000000040000000000000000000000000000001b00000004000000400000000000"
+    "00000000000000000000100200000000000018000000000000000900000001000000080000"
+    "00000000001800000000000000260000000100000003000000000000000000000000000000"
+    "7c000000000000000000000000000000000000000000000001000000000000000000000000"
+    "0000002c00000008000000030000000000000000000000000000007c000000000000000000"
+    "00000000000000000000000000000100000000000000000000000000000031000000010000"
+    "00300000000000000000000000000000007c00000000000000130000000000000000000000"
+    "00000000010000000000000001000000000000003a00000001000000000000000000000000"
+    "000000000000008f0000000000000000000000000000000000000000000000010000000000"
+    "000000000000000000004f0000000100000002000000000000000000000000000000900000"
+    "00000000003800000000000000000000000000000008000000000000000000000000000000"
+    "4a000000040000004000000000000000000000000000000028020000000000001800000000"
+    "00000009000000070000000800000000000000180000000000000001000000020000000000"
+    "0000000000000000000000000000c80000000000000020010000000000000a0000000a0000"
+    "00080000000000000018000000000000000900000003000000000000000000000000000000"
+    "00000000e80100000000000023000000000000000000000000000000010000000000000000"
+    "00000000000000110000000300000000000000000000000000000000000000400200000000"
+    "00005900000000000000000000000000000001000000000000000000000000000000";
 
 class ONNXRunner {
-public:
+ public:
   explicit ONNXRunner() {}
   explicit ONNXRunner(const char *modelPath) {
     // Prepare model and env
@@ -41,21 +82,18 @@ public:
                           std::vector<int64_t> inputInt64,
                           std::vector<float> inputFloat, int batchSize);
 
-private:
-  static Ort::Value
-  getInputValueFloat(Ort::Session *session,
-                     std::vector<float> &input, int inputIdx,
-                     int batchSize);
+ private:
+  static Ort::Value getInputValueFloat(Ort::Session *session,
+                                       std::vector<float> &input, int inputIdx,
+                                       int batchSize);
 
-  static Ort::Value
-  getInputValueString(Ort::AllocatorWithDefaultOptions allocator,
-                      Ort::Session *session, std::vector<std::string> &input,
-                      int inputIdx, int batchSize);
+  static Ort::Value getInputValueString(
+      Ort::AllocatorWithDefaultOptions allocator, Ort::Session *session,
+      std::vector<std::string> &input, int inputIdx, int batchSize);
 
-  static Ort::Value
-  getInputValueInt64(Ort::Session *session,
-                     std::vector<int64_t> &input,
-                     int inputIdx, int batchSize);
+  static Ort::Value getInputValueInt64(Ort::Session *session,
+                                       std::vector<int64_t> &input,
+                                       int inputIdx, int batchSize);
 
   Ort::SessionOptions sessionOptions;
   Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "test"};
@@ -122,7 +160,7 @@ static void truncatePrefix(const std::string &str, std::string &strPrefix) {
 
 static std::string encodeStringFeature(const std::string &str) {
   unsigned char hash[EVP_MD_size(EVP_sha256())];
-  EVP_MD_CTX* context = EVP_MD_CTX_new();
+  EVP_MD_CTX *context = EVP_MD_CTX_new();
   EVP_DigestInit_ex(context, EVP_sha256(), NULL);
   EVP_DigestUpdate(context, str.c_str(), str.size());
   EVP_DigestFinal_ex(context, hash, NULL);
@@ -136,32 +174,34 @@ static std::string encodeStringFeature(const std::string &str) {
 }
 
 bool startsWith(const std::string &str, const std::string &prefix) {
-    if (str.size() < prefix.size()) {
-        return false;
-    }
-    return str.compare(0, prefix.size(), prefix) == 0;
+  if (str.size() < prefix.size()) {
+    return false;
+  }
+  return str.compare(0, prefix.size(), prefix) == 0;
 }
 
 bool endsWith(const std::string &str, const std::string &suffix) {
-    if (str.size() < suffix.size()) {
-        return false;
-    }
-    return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+  if (str.size() < suffix.size()) {
+    return false;
+  }
+  return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-std::vector<std::string> split(const std::string& str, const std::string& delimiters) {
-    std::regex regex("[" + delimiters + "]");
-    std::sregex_token_iterator it(str.begin(), str.end(), regex, -1);
-    std::sregex_token_iterator end;
-    std::vector<std::string> tokens;
-    while (it != end) {
-        tokens.push_back(*it++);
-    }
-    return tokens;
+std::vector<std::string> split(const std::string &str,
+                               const std::string &delimiters) {
+  std::regex regex("[" + delimiters + "]");
+  std::sregex_token_iterator it(str.begin(), str.end(), regex, -1);
+  std::sregex_token_iterator end;
+  std::vector<std::string> tokens;
+  while (it != end) {
+    tokens.push_back(*it++);
+  }
+  return tokens;
 }
 
 // Preprocess data for LTO model.
-static void preprocessLTOData(std::vector<std::string> &inputString, std::string input) {
+static void preprocessLTOData(std::vector<std::string> &inputString,
+                              std::string input) {
   std::vector<std::string> words;
   std::istringstream iss(input);
   std::string word;
@@ -174,14 +214,15 @@ static void preprocessLTOData(std::vector<std::string> &inputString, std::string
   int length = words.size();
   int minimumLinkFileLength = 3;
   for (int i = 0; i < length; i++) {
-    if (endsWith(words[i], ".a") || endsWith(words[i], ".so") || endsWith(words[i], ".o")) {
+    if (endsWith(words[i], ".a") || endsWith(words[i], ".so") ||
+        endsWith(words[i], ".o")) {
       std::string filename = words[i].substr(words[i].find_last_of("/") + 1);
       std::string commands = filename.substr(0, filename.find_last_of("."));
       std::vector<std::string> command_parts = split(commands, "-_./|");
       for (const auto &ele : command_parts) {
         if (ele.size() > minimumLinkFileLength) {
           inputString.push_back(ele);
-	}
+        }
       }
     }
   }
@@ -253,7 +294,6 @@ static void preprocessData(std::vector<std::string> &inputString,
 static bool findOptimizerModelPath(const std::string &modelRelPath,
                                    std::string &optModelPath,
                                    const char *envName = "LD_LIBRARY_PATH") {
-
   const char *paths = std::getenv(envName);
   std::istringstream envPaths{paths ? paths : ""};
   std::vector<std::string> modelPathList;
@@ -315,8 +355,7 @@ extern int64_t runONNXModelOptimizer(int argcSW, const char **argvSW,
 
 // Interface for LTO model.
 // Add one more param to unify interface.
-extern int64_t runONNXModelLTO(char* link_files)
-{
+extern int64_t runONNXModelLTO(char *link_files) {
   // Create AI models.
   std::string optModelPath;
   // Should make sure the path for LTO model.
@@ -337,14 +376,13 @@ extern int64_t runONNXModelLTO(char* link_files)
   preprocessLTOData(inputString, link_files);
   int64_t output;
   if (instance != nullptr) {
-    output =
-        instance->runONNXModelLTO(inputString, inputInt64, inputFloat, 1);
+    output = instance->runONNXModelLTO(inputString, inputInt64, inputFloat, 1);
   }
   // Delete model runner.
   deleteONNXRunner(instance);
   return output;
 }
 
-} // namespace compilerONNXRunner
-} // extern "C"
+}  // namespace compilerONNXRunner
+}  // extern "C"
 #endif

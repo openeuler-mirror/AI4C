@@ -46,17 +46,15 @@ get_float_output_t get_float_output;
 typedef void (*free_engine_t)();
 free_engine_t free_engine;
 
-const pass_data rtl_unroll_opt_pass_data = {
-  .type = RTL_PASS,
-  .name = "rtl_unroll_opt_pass",
-  .optinfo_flags = OPTGROUP_NONE,
-  .tv_id = TV_NONE,
-  .properties_required = 0,
-  .properties_provided = 0,
-  .properties_destroyed = 0,
-  .todo_flags_start = 0,
-  .todo_flags_finish = 0
-};
+const pass_data rtl_unroll_opt_pass_data = {.type = RTL_PASS,
+                                            .name = "rtl_unroll_opt_pass",
+                                            .optinfo_flags = OPTGROUP_NONE,
+                                            .tv_id = TV_NONE,
+                                            .properties_required = 0,
+                                            .properties_provided = 0,
+                                            .properties_destroyed = 0,
+                                            .todo_flags_start = 0,
+                                            .todo_flags_finish = 0};
 
 struct rtl_unroll_opt_pass : rtl_opt_pass {
  public:
@@ -87,10 +85,8 @@ struct rtl_unroll_opt_pass : rtl_opt_pass {
 };
 
 struct register_pass_info rtl_unroll_opt_passinfo {
-  .pass = new rtl_unroll_opt_pass(),
-  .reference_pass_name = "loop2_unroll",
-  .ref_pass_instance_number = 0,
-  .pos_op = PASS_POS_INSERT_BEFORE
+  .pass = new rtl_unroll_opt_pass(), .reference_pass_name = "loop2_unroll",
+  .ref_pass_instance_number = 0, .pos_op = PASS_POS_INSERT_BEFORE
 };
 
 int plugin_init(struct plugin_name_args* plugin_info,
@@ -110,7 +106,7 @@ int plugin_init(struct plugin_name_args* plugin_info,
     }
   }
 
-  if (access(g_model_path, F_OK)) {
+  if (!g_model_path || access(g_model_path, F_OK)) {
     fprintf(stderr, "Model '%s' not found\n", g_model_path);
     return -1;
   }
@@ -127,6 +123,12 @@ int plugin_init(struct plugin_name_args* plugin_info,
   get_int64_output =
       (get_int64_output_t)dlsym(g_infer_handle, "get_int64_output");
   free_engine = (free_engine_t)dlsym(g_infer_handle, "free_engine");
+
+  if (!initialize || !add_int64_input || !inference || !get_int64_output ||
+      !free_engine) {
+    fprintf(stderr, "Invalid inference engine '%s'\n", g_infer_path);
+    return -1;
+  }
 
   dlclose(g_infer_handle);
 

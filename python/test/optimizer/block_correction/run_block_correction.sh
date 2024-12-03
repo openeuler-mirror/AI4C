@@ -15,11 +15,11 @@ $gxx_compiler -std=c++17 -Wall -fno-rtti  \
 	block_correction_plugin.cpp
 
 $gxx_compiler -static-libstdc++ -shared \
-    -o block_correction_plugin.so -lonnxruntime      \
+    -o block_correction_plugin.so     \
     block_correction_plugin.o
 
 $gcc_compiler test.c -O2 -o test -funroll-loops                    \
-    -fplugin=block_correction_plugin.so                            \
+    -fplugin=./block_correction_plugin.so                            \
     -fplugin-arg-block_correction_plugin-model=$model_path         \
     -fplugin-arg-block_correction_plugin-engine=$infer_engine_path
 

@@ -20,7 +20,7 @@ class ONNXRunner {
 
   int inference();
 
-  void loadModel(const char* model_path);
+  void load_model(const char* model_path);
 
   int add_int64_input(int64_t* data, int num);
   int add_int32_input(int32_t* data, int num);
