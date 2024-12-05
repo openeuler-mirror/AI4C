@@ -32,7 +32,7 @@ struct UnifDynConfigStrategy : IntOptDynConfigStrategy {
     int min_val = int_opt_vals.min_val;
     int max_val = int_opt_vals.max_val;
     int intvl = (max_val - min_val) / n_elements;
-    intvl = intvl > 0 ? intvl : 1;
+    intvl = intvl >= 0 ? intvl : 1;
 
     int remain_size = n_elements - 1;
     dyn_config.push_back(default_val);
@@ -356,7 +356,7 @@ void read_option_category(const YAML::Node& node, const std::string& category,
   }
 }
 
-void load_coarse_option_yaml(const std::string& filename,
+int load_coarse_option_yaml(const std::string& filename,
                              OptionManager& opt_mgr) {
   // Load the YAML file
   const std::set<std::string> core_categories = {"GIMPLE", "RTL", "PARAM"};
@@ -366,6 +366,7 @@ void load_coarse_option_yaml(const std::string& filename,
     doc = YAML::LoadFile(filename);
   } catch (YAML::ParserException& e) {
     std::cerr << "Error parsing coarse option YAML: " << e.what() << std::endl;
+    return 1;
   }
 
   if (doc.IsMap()) {
@@ -377,7 +378,9 @@ void load_coarse_option_yaml(const std::string& filename,
         read_option_category(node, category, opt_mgr);
       }
     }
+    return 0;
   }
+  return 1;
 }
 
 }  // namespace ai4c

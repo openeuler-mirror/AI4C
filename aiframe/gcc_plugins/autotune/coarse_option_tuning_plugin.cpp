@@ -18,16 +18,15 @@ OptionManager opt_mgr;
 
 /* ===------------------------- Generate -------------------------=== */
 const pass_data pass_data_coarse_option_generate = {
-  .type = GIMPLE_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
-  .name = "coarse_option_generate",
-  .optinfo_flags = OPTGROUP_NONE,
-  .tv_id = TV_NONE,
-  .properties_required = PROP_gimple_any,
-  .properties_provided = 0,
-  .properties_destroyed = 0,
-  .todo_flags_start = 0,
-  .todo_flags_finish = 0
-};
+    .type = GIMPLE_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
+    .name = "coarse_option_generate",
+    .optinfo_flags = OPTGROUP_NONE,
+    .tv_id = TV_NONE,
+    .properties_required = PROP_gimple_any,
+    .properties_provided = 0,
+    .properties_destroyed = 0,
+    .todo_flags_start = 0,
+    .todo_flags_finish = 0};
 
 struct coarse_option_generate_pass : gimple_opt_pass {
  public:
@@ -60,24 +59,22 @@ struct coarse_option_generate_pass : gimple_opt_pass {
 
 struct register_pass_info coarse_option_generate_passinfo {
   .pass = new coarse_option_generate_pass(),
-  .reference_pass_name = "*warn_unused_result",
-  .ref_pass_instance_number = 0,
+  .reference_pass_name = "*warn_unused_result", .ref_pass_instance_number = 0,
   .pos_op = PASS_POS_INSERT_BEFORE
 };
 /* ===------------------------- Generate -------------------------=== */
 
 /* ===------------------------- Auto-Tuning -------------------------=== */
 const pass_data pass_data_coarse_option_tuning = {
-  .type = GIMPLE_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
-  .name = "coarse_option_tuning",
-  .optinfo_flags = OPTGROUP_NONE,
-  .tv_id = TV_NONE,
-  .properties_required = PROP_gimple_any,
-  .properties_provided = 0,
-  .properties_destroyed = 0,
-  .todo_flags_start = 0,
-  .todo_flags_finish = 0
-};
+    .type = GIMPLE_PASS,  // GIMPLE_PASS, RTL_PASS, SIMPLE_IPA_PASS, IPA_PASS
+    .name = "coarse_option_tuning",
+    .optinfo_flags = OPTGROUP_NONE,
+    .tv_id = TV_NONE,
+    .properties_required = PROP_gimple_any,
+    .properties_provided = 0,
+    .properties_destroyed = 0,
+    .todo_flags_start = 0,
+    .todo_flags_finish = 0};
 
 struct coarse_option_tuning_pass : gimple_opt_pass {
  public:
@@ -117,8 +114,7 @@ struct coarse_option_tuning_pass : gimple_opt_pass {
 
 struct register_pass_info coarse_option_tuning_passinfo {
   .pass = new coarse_option_tuning_pass(),
-  .reference_pass_name = "*warn_unused_result",
-  .ref_pass_instance_number = 0,
+  .reference_pass_name = "*warn_unused_result", .ref_pass_instance_number = 0,
   .pos_op = PASS_POS_INSERT_BEFORE
 };
 /* ===------------------------- Auto-Tuning -------------------------=== */
@@ -146,7 +142,11 @@ int plugin_init(struct plugin_name_args *plugin_info,
     } else if (key == "autotune") {
       config_path = std::string(value);
       mode = TuneMode::Tuning;
-      load_config_yaml(config_path);
+      if (load_config_yaml(config_path)) {
+        printf("failed to load autotune config file: %s\n",
+               config_path.c_str());
+        return 1;
+      }
     } else if (key == "yaml") {
       std::string yaml_file = std::string(value);
       std::filesystem::path file_path_tmp(yaml_file);
@@ -154,7 +154,10 @@ int plugin_init(struct plugin_name_args *plugin_info,
         printf("cannot find yaml file: %s\n", yaml_file.c_str());
         return 1;
       }
-      load_coarse_option_yaml(yaml_file, opt_mgr);
+      if (load_coarse_option_yaml(yaml_file, opt_mgr)) {
+        printf("cannot load coarse grained yaml file: %s\n", yaml_file.c_str());
+        return 1;
+      }
     }
   }
 

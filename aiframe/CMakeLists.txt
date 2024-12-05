@@ -4,9 +4,8 @@ function(create_onnxrunner lib_name src_file)
   set_target_properties(${lib_name} PROPERTIES PREFIX "")
   target_include_directories(${lib_name} PRIVATE ${FRAMEWORK_INCLUDE})
 
-  target_link_libraries(${lib_name}
-                        PRIVATE
-                        ${ONNXRUNTIME_LIB})
+  target_link_directories(${lib_name} PRIVATE ${ONNXRUNTIME_LIB})
+  target_link_libraries(${lib_name} PRIVATE onnxruntime)
 
   # Install the targets and include files to expected locations.
   if(NOT DEFINED CMAKE_INSTALL_LIBDIR)

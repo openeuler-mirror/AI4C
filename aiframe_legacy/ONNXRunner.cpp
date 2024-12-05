@@ -1,4 +1,5 @@
 #include "include/ONNXRunner.h"
+
 #include <algorithm>
 #include <numeric>
 #include <vector>
@@ -79,10 +80,9 @@ Ort::Value ONNXRunner::getInputValueInt64(Ort::Session *session,
   return inputTmp;
 }
 
-std::vector<float>
-ONNXRunner::runONNXModel(std::vector<std::string> inputString,
-                         std::vector<int64_t> inputInt64,
-                         std::vector<float> inputFloat, int batchSize) {
+std::vector<float> ONNXRunner::runONNXModel(
+    std::vector<std::string> inputString, std::vector<int64_t> inputInt64,
+    std::vector<float> inputFloat, int batchSize) {
   Ort::AllocatorWithDefaultOptions allocator;
 
   // Get input count
@@ -234,21 +234,20 @@ int64_t ONNXRunner::runONNXModelOptimizer(std::vector<std::string> inputString,
   return label;
 }
 
-int64_t ONNXRunner::runONNXModelLTO (std::vector<std::string> inputString,
-                                     std::vector<int64_t> inputInt64,
-                                     std::vector<float> inputFloat,
-                                     int batchSize) {
-  
+int64_t ONNXRunner::runONNXModelLTO(std::vector<std::string> inputString,
+                                    std::vector<int64_t> inputInt64,
+                                    std::vector<float> inputFloat,
+                                    int batchSize) {
   Ort::AllocatorWithDefaultOptions allocator;
 
   int size = inputString.size();
-    
+
   // Get input count
   int inputCount = session->GetInputCount();
   std::vector<std::vector<int64_t>> inputInt64Tensors(FEATURE_SIZE_INT64_OPT);
   std::vector<std::string> inputStringTensor;
 
-   // Get input name
+  // Get input name
   std::vector<std::string> inputNameList;
   for (int i = 0; i < inputCount; i++) {
     auto inputName = session->GetInputNameAllocated(i, allocator);
@@ -302,9 +301,9 @@ int64_t ONNXRunner::runONNXModelLTO (std::vector<std::string> inputString,
   }
 
   auto outputTensors = session->Run(
-    Ort::RunOptions{nullptr}, inputNameStrFinal.data(), inputFinal.data(),
-    inputCount, outputNameStrFinal.data(), outputCount);
-  
+      Ort::RunOptions{nullptr}, inputNameStrFinal.data(), inputFinal.data(),
+      inputCount, outputNameStrFinal.data(), outputCount);
+
   int64_t label = 0;
   for (int i = 0; i < batchSize; i++) {
     int64_t *outputLabel = outputTensors[0].GetTensorMutableData<int64_t>();
@@ -314,5 +313,4 @@ int64_t ONNXRunner::runONNXModelLTO (std::vector<std::string> inputString,
   return label;
 }
 
-
-} // namespace compilerONNXRunner
+}  // namespace compilerONNXRunner
