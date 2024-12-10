@@ -25,7 +25,7 @@ class XGBoostCostModel(object):
     def predict(self, xs: List[List[int]]):
         ret = []
         for x in xs:
-            ret.append(self.bst.predict(np.asarray([x]))[0])
+            ret.append(self.bst.predict(asarray([x]))[0])
         return ret
 
 

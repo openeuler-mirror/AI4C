@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-ai4c-option-tune --test_limit 3 -r run_test.sh
+ai4c-option-tune --test_limit 20 -r run_test.sh
 
 ### clean intermediate files ###
 if [ "$1" = "clean" ]; then
