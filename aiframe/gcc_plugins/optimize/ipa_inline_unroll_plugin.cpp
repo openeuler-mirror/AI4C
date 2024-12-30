@@ -781,6 +781,14 @@ static bool want_inline_small_function_p(struct cgraph_edge *e, bool report) {
   } else {
     int growth = estimate_edge_growth(e);
     ipa_hints hints = estimate_edge_hints(e);
+
+    /* AI4Compiler inline "maybe_hot_p" heuristic rule adjustment */
+
+    bool maybe_hot_opt = false;
+    if ((e->count.ipa().to_gcov_type() >= 0) && maybe_hot_count_p(NULL, e->count.ipa())){
+      maybe_hot_opt = true;
+    }
+    
     /* We have two independent groups of hints.  If one matches in each
    of groups the limits are inreased.  If both groups matches, limit
    is increased even more.  */
@@ -836,8 +844,8 @@ static bool want_inline_small_function_p(struct cgraph_edge *e, bool report) {
     /* If call is cold, do not inline when function body would grow. */
     else if (!e->maybe_hot_p() &&
              ((growth >= inline_insns_single(e->caller, false, false)) ||
-              growth_positive_p(callee, e, growth)) &&
-             !e->count.ipa().to_gcov_type() > param_hot_bb_count_fraction) {
+              growth_positive_p(callee, e, growth)) && 
+              !maybe_hot_opt) {
       e->inline_failed = CIF_UNLIKELY_CALL;
       want_inline = false;
     }
@@ -2829,11 +2837,14 @@ static bool loop_exit_at_end_p(class loop *loop) {
 static void decide_unrolling_(int flags) {
   /* Scan the loops, inner ones first. */
   int64_t label;
+  unsigned niter;
 
   for (auto loop : loops_list(cfun, LI_FROM_INNERMOST)) {
     loop->lpt_decision.decision = LPT_NONE;
     dump_user_location_t locus = get_loop_location(loop);
     std::string functionName = current_function_name();
+    class niter_desc *desc = get_simple_loop_desc(loop);
+    niter = desc->niter;
     if (dump_enabled_p())
       dump_printf_loc(MSG_NOTE, locus,
                       "considering unrolling loop %d at BB %d\n", loop->num,
@@ -2900,6 +2911,9 @@ static void decide_unrolling_(int flags) {
     }
 
     if (loop->lpt_decision.decision == LPT_UNROLL_CONSTANT) {
+      if (niter <= loop->unroll) {
+        continue;
+      }
       loop->lpt_decision.times = loop->unroll - 1;
     } else {
       unsigned i, nunroll;
