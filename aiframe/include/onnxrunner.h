@@ -31,7 +31,7 @@ class ONNXRunner {
   int32_t* get_int32_output(int index);
   int64_t* get_int64_output(int index);
   float* get_float_output(int index);
-
+  std::vector<float> get_probability(int batch_size);
   void clear();
 
  private:

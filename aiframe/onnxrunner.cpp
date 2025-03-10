@@ -24,7 +24,7 @@ int ONNXRunner::inference() {
     return -1;
   }
   for (int i = 0; i < output_count; i++) {
-    std::string output = session->GetOutputNameAllocated(0, allocator).get();
+    std::string output = session->GetOutputNameAllocated(i, allocator).get();
     output_names_.push_back(output);
   }
 
@@ -140,6 +140,20 @@ void ONNXRunner::clear() {
   output_names_.clear();
 }
 
+std::vector<float> ONNXRunner::get_probability(int batch_size) {
+  std::vector<float> probs;
+  for (int i = 0; i < batch_size; ++i) {
+	  Ort::Value mapOut =
+	       output_values_[1].GetValue(static_cast<int>(i), allocator);
+	  Ort::Value keysOrt = mapOut.GetValue(0, allocator);
+	  int64_t * keysRet = keysOrt.GetTensorMutableData<int64_t>();
+	  Ort::Value valuesOrt = mapOut.GetValue(1, allocator);
+	  float *valuesRet = valuesOrt.GetTensorMutableData<float>();
+	  probs.push_back((*(valuesRet + 1)));
+  } 
+  return probs;
+}
+
 extern "C" {
 
 static ONNXRunner* onnx_runner;
@@ -185,7 +199,9 @@ float* get_float_output(int index) {
 }
 
 void clear_engine() { onnx_runner->clear(); }
-
+std::vector<float> get_probability(int batch_size) {
+  return onnx_runner->get_probability(batch_size);
+}
 void free_engine() {
   if (onnx_runner) {
     delete onnx_runner;
