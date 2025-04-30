@@ -8,7 +8,6 @@ ONNXRunner::~ONNXRunner() {
   if (session) {
     delete session;
     session = nullptr;
-  }
 }
 
 void ONNXRunner::load_model(const char* model_path) {
@@ -140,18 +139,43 @@ void ONNXRunner::clear() {
   output_names_.clear();
 }
 
-std::vector<float> ONNXRunner::get_probability(int batch_size) {
-  std::vector<float> probs;
-  for (int i = 0; i < batch_size; ++i) {
-	  Ort::Value mapOut =
-	       output_values_[1].GetValue(static_cast<int>(i), allocator);
-	  Ort::Value keysOrt = mapOut.GetValue(0, allocator);
-	  int64_t * keysRet = keysOrt.GetTensorMutableData<int64_t>();
-	  Ort::Value valuesOrt = mapOut.GetValue(1, allocator);
-	  float *valuesRet = valuesOrt.GetTensorMutableData<float>();
-	  probs.push_back((*(valuesRet + 1)));
-  } 
+float* ONNXRunner::get_label_probability(int index, int label_index) {
+  /* batched label-prob tensor: sequence<map<label,prob>> */
+  const Ort::Value& label_map_seq = output_values_[index];
+
+  if (label_map_seq.IsTensor() ||
+      label_map_seq.GetTypeInfo().GetONNXType() != ONNX_TYPE_SEQUENCE) {
+    fprintf(stderr, "batched label-prob map output is not an ONNX sequence\n");
+    return nullptr;
+  }
+
+  size_t seq_size = label_map_seq.GetCount();
+  float* probs = new float[seq_size];
+  if (probs == nullptr) {
+    fprintf(stderr, "failed label-prob array allocation\n");
+    return nullptr; 
+  }
+  for (size_t i = 0; i < seq_size; ++i) {
+    Ort::Value label_map = label_map_seq.GetValue(i, allocator);
+    if (label_map.IsTensor() ||
+        label_map.GetTypeInfo().GetONNXType() != ONNX_TYPE_MAP) { 
+      fprintf(stderr, "label-prob map output is not an ONNX map\n");
+      return nullptr;
+    }
+
+    Ort::Value label_probs_out = label_map.GetValue(1, allocator);
+    float* label_probs = label_probs_out.GetTensorMutableData<float>();
+
+    probs[i] = label_probs[label_index];
+  }
   return probs;
+}
+
+void ONNXRunner::free_label_probability(float* probs) {
+  if (probs != nullptr) {
+    delete[] probs;
+    probs = nullptr;
+  }
 }
 
 extern "C" {
@@ -198,10 +222,16 @@ float* get_float_output(int index) {
   return onnx_runner->get_float_output(index);
 }
 
-void clear_engine() { onnx_runner->clear(); }
-std::vector<float> get_probability(int batch_size) {
-  return onnx_runner->get_probability(batch_size);
+float* get_label_probability(int index, int label_index) {
+  return onnx_runner->get_label_probability(index, label_index);
 }
+
+void free_label_probability(float* probs) {
+  return onnx_runner->free_label_probability(probs);
+}
+
+void clear_engine() { onnx_runner->clear(); }
+
 void free_engine() {
   if (onnx_runner) {
     delete onnx_runner;

@@ -31,7 +31,12 @@ class ONNXRunner {
   int32_t* get_int32_output(int index);
   int64_t* get_int64_output(int index);
   float* get_float_output(int index);
-  std::vector<float> get_probability(int batch_size);
+
+  /* Get and free label probability from an ONNX classification model.
+     Specify tensor index and label index from output tensors. */
+  float* get_label_probability(int index, int label_index);
+  void free_label_probability(float* probs);
+
   void clear();
 
  private:
