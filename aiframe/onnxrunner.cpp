@@ -8,6 +8,7 @@ ONNXRunner::~ONNXRunner() {
   if (session) {
     delete session;
     session = nullptr;
+  }
 }
 
 void ONNXRunner::load_model(const char* model_path) {
