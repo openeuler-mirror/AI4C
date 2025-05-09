@@ -24,7 +24,7 @@ int ONNXRunner::inference() {
     return -1;
   }
   for (int i = 0; i < output_count; i++) {
-    std::string output = session->GetOutputNameAllocated(0, allocator).get();
+    std::string output = session->GetOutputNameAllocated(i, allocator).get();
     output_names_.push_back(output);
   }
 
@@ -140,6 +140,45 @@ void ONNXRunner::clear() {
   output_names_.clear();
 }
 
+float* ONNXRunner::get_label_probability(int index, int label_index) {
+  /* batched label-prob tensor: sequence<map<label,prob>> */
+  const Ort::Value& label_map_seq = output_values_[index];
+
+  if (label_map_seq.IsTensor() ||
+      label_map_seq.GetTypeInfo().GetONNXType() != ONNX_TYPE_SEQUENCE) {
+    fprintf(stderr, "batched label-prob map output is not an ONNX sequence\n");
+    return nullptr;
+  }
+
+  size_t seq_size = label_map_seq.GetCount();
+  float* probs = new float[seq_size];
+  if (probs == nullptr) {
+    fprintf(stderr, "failed label-prob array allocation\n");
+    return nullptr; 
+  }
+  for (size_t i = 0; i < seq_size; ++i) {
+    Ort::Value label_map = label_map_seq.GetValue(i, allocator);
+    if (label_map.IsTensor() ||
+        label_map.GetTypeInfo().GetONNXType() != ONNX_TYPE_MAP) { 
+      fprintf(stderr, "label-prob map output is not an ONNX map\n");
+      return nullptr;
+    }
+
+    Ort::Value label_probs_out = label_map.GetValue(1, allocator);
+    float* label_probs = label_probs_out.GetTensorMutableData<float>();
+
+    probs[i] = label_probs[label_index];
+  }
+  return probs;
+}
+
+void ONNXRunner::free_label_probability(float* probs) {
+  if (probs != nullptr) {
+    delete[] probs;
+    probs = nullptr;
+  }
+}
+
 extern "C" {
 
 static ONNXRunner* onnx_runner;
@@ -182,6 +221,14 @@ int64_t* get_int64_output(int index) {
 }
 float* get_float_output(int index) {
   return onnx_runner->get_float_output(index);
+}
+
+float* get_label_probability(int index, int label_index) {
+  return onnx_runner->get_label_probability(index, label_index);
+}
+
+void free_label_probability(float* probs) {
+  return onnx_runner->free_label_probability(probs);
 }
 
 void clear_engine() { onnx_runner->clear(); }
