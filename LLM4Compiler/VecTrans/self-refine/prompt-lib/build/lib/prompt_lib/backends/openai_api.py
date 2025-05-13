@@ -7,23 +7,21 @@ import time
 import json
 import anthropic
 import httpx
-import dashscope
-from openai import OpenAI
-
 
 from prompt_lib.backends.wrapper import BaseAPIWrapper
 from prompt_lib.backends.self_hosted import OpenSourceAPIWrapper
 from prompt_lib.backends.anthropic_api import AnthropicAPIWrapper
 
 # openai.api_key = os.getenv("OPENAI_API_KEY")
-apiKey = os.getenv("API_KEY")
-LLM_BASE_URL=os.getenv("LLM_BASE_URL")
+openai.api_key = "sk-538d67bfd46e4e5b8f311424f3f01f22"
 
-client = OpenAI(api_key=apiKey,
-        http_client=httpx.Client(
-            verify=False
-        ),
-        base_url=LLM_BASE_URL)
+client = httpx.Client(verify=False)
+
+custom_base_url = "https://api.deepseek.com"
+
+openai.api_base = custom_base_url
+openai.api_requestor._client = client
+
 # check if orgainization is set
 
 if os.getenv("OPENAI_ORG") is not None:
@@ -38,8 +36,8 @@ def retry_with_exponential_backoff(
     jitter: bool = True,
     max_retries: int = 10,
     errors: tuple = (
-        openai.RateLimitError,
-        openai.InternalServerError,
+        openai.error.RateLimitError,
+        openai.error.ServiceUnavailableError,
         anthropic.RateLimitError,
     ),
 ):
@@ -235,9 +233,7 @@ class ChatGPTAPIWrapper(BaseAPIWrapper):
                 else:
                     response_combined["choices"] += response["choices"]
             return response_combined
-        
-        print(messages)
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=engine,
             messages=messages,
             temperature=temperature,
@@ -254,13 +250,13 @@ class ChatGPTAPIWrapper(BaseAPIWrapper):
     @staticmethod
     def get_first_response(response) -> Dict[str, Any]:
         """Returns the first response from the list of responses."""
-        text = response.choices[0].message.content
+        text = response["choices"][0]["message"]["content"]
         return text
 
     @staticmethod
     def get_majority_answer(response) -> Dict[str, Any]:
         """Returns the majority answer from the list of responses."""
-        answers = [choice.message.content for choice in response.choices]
+        answers = [choice["message"]["content"] for choice in response["choices"]]
         answers = Counter(answers)
         # if there is a tie, return the first answer
         if len(answers) == 1:
@@ -276,226 +272,22 @@ class ChatGPTAPIWrapper(BaseAPIWrapper):
         """Returns the list of responses."""
         # return [choice["message"]["content"] for choice in response["choices"]]  # type: ignore
         return [
-            {"generated_answer": choice.message.content, "logprobs": None}
-            for choice in response.choices
-        ]
-
-
-class DeepseekAPIWrapper(BaseAPIWrapper):
-    @staticmethod
-    @retry_with_exponential_backoff
-    def call(
-        prompt: Union[str, List[Dict[str, str]]],
-        max_tokens: int,
-        engine: str,
-        stop_token: str,
-        temperature: float,
-        top_p: float = 1,
-        num_completions: int = 1,
-        system_message: Optional[str] = None,
-    ) -> dict:
-        system_message = (
-            system_message or None
-        )
-
-        if isinstance(prompt, str):
-            messages = []
-            if system_message:
-                messages.append({"role": "system", "content": system_message})
-            messages.append({"role": "user", "content": prompt})
-        elif isinstance(prompt, list):
-            messages = prompt
-            if system_message:
-                messages.insert(0, {"role": "system", "content": system_message})
-        else:
-            raise ValueError(
-                "Invalid prompt type. Prompt should be a string or a list of messages."
-            )
-
-        if num_completions > 2:
-            response_combined = dict()
-            num_completions_remaining = num_completions
-            for i in range(0, num_completions, 2):
-                # note that we are calling the same function --- this prevents backoff from being reset for the entire function
-                response = DeepseekAPIWrapper.call(
-                    prompt=prompt,
-                    max_tokens=max_tokens,
-                    engine=engine,
-                    stop_token=stop_token,
-                    temperature=temperature,
-                    top_p=top_p,
-                    num_completions=min(num_completions_remaining, 2),
-                )
-                num_completions_remaining -= 2
-                if i == 0:
-                    response_combined = response
-                else:
-                    response_combined["choices"] += response["choices"]
-            return response_combined
-        
-        # print(messages)
-        response = client.chat.completions.create(
-            model=engine,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            stop=[stop_token] if stop_token else None,
-            # logprobs=3,
-            n=num_completions,
-            stream=False,
-        )
-
-        return response
-
-    @staticmethod
-    def get_first_response(response) -> Dict[str, Any]:
-        """Returns the first response from the list of responses."""
-        text = response.choices[0].message.content
-        return text
-
-    @staticmethod
-    def get_majority_answer(response) -> Dict[str, Any]:
-        """Returns the majority answer from the list of responses."""
-        answers = [choice.message.content for choice in response.choices]
-        answers = Counter(answers)
-        # if there is a tie, return the first answer
-        if len(answers) == 1:
-            return answers.most_common(1)[0][0]
-
-        if answers.most_common(1)[0][1] == answers.most_common(2)[1][1]:
-            return ChatGPTAPIWrapper.get_first_response(response)
-
-        return answers.most_common(1)[0][0]
-
-    @staticmethod
-    def get_all_responses(response) -> Dict[str, Any]:
-        """Returns the list of responses."""
-        # return [choice["message"]["content"] for choice in response["choices"]]  # type: ignore
-        return [
-            {"generated_answer": choice.message.content, "logprobs": None}
-            for choice in response.choices
-        ]
-
-
-class DashScopeAPIWrapper(BaseAPIWrapper):
-    @staticmethod
-    @retry_with_exponential_backoff
-    def call(
-        prompt: Union[str, List[Dict[str, str]]],
-        max_tokens: int,
-        engine: str,
-        stop_token: str,
-        temperature: float,
-        top_p: float = 1,
-        num_completions: int = 1,
-        system_message: Optional[str] = None,
-    ) -> dict:
-        system_message = (
-            system_message or None
-        )
-
-        if isinstance(prompt, str):
-            messages = []
-            if system_message:
-                messages.append({"role": "system", "content": system_message})
-            messages.append({"role": "user", "content": prompt})
-        elif isinstance(prompt, list):
-            messages = prompt
-            if system_message:
-                messages.insert(0, {"role": "system", "content": system_message})
-        else:
-            raise ValueError(
-                "Invalid prompt type. Prompt should be a string or a list of messages."
-            )
-
-        if num_completions > 2:
-            response_combined = dict()
-            num_completions_remaining = num_completions
-            for i in range(0, num_completions, 2):
-                # note that we are calling the same function --- this prevents backoff from being reset for the entire function
-                response = DashScopeAPIWrapper.call(
-                    prompt=prompt,
-                    max_tokens=max_tokens,
-                    engine=engine,
-                    stop_token=stop_token,
-                    temperature=temperature,
-                    top_p=top_p,
-                    num_completions=min(num_completions_remaining, 2),
-                )
-                num_completions_remaining -= 2
-                if i == 0:
-                    response_combined = response
-                else:
-                    response_combined["choices"] += response["choices"]
-            return response_combined
-        
-        # print(messages)
-        response = dashscope.Generation.call(
-            api_key=os.getenv('API_KEY'),
-            model=engine,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            stop=[stop_token] if stop_token else None,
-            # logprobs=3,
-            n=num_completions,
-            stream=False,
-            result_format='message',
-        )
-
-        return response
-
-    @staticmethod
-    def get_first_response(response) -> Dict[str, Any]:
-        """Returns the first response from the list of responses."""
-        print(response)
-        text = response.output.choices[0].message.content
-        return text
-
-    @staticmethod
-    def get_majority_answer(response) -> Dict[str, Any]:
-        """Returns the majority answer from the list of responses."""
-        answers = [choice.message.content for choice in response.choices]
-        answers = Counter(answers)
-        # if there is a tie, return the first answer
-        if len(answers) == 1:
-            return answers.most_common(1)[0][0]
-
-        if answers.most_common(1)[0][1] == answers.most_common(2)[1][1]:
-            return ChatGPTAPIWrapper.get_first_response(response)
-
-        return answers.most_common(1)[0][0]
-
-    @staticmethod
-    def get_all_responses(response) -> Dict[str, Any]:
-        """Returns the list of responses."""
-        # return [choice["message"]["content"] for choice in response["choices"]]  # type: ignore
-        return [
-            {"generated_answer": choice.message.content, "logprobs": None}
-            for choice in response.choices
+            {"generated_answer": choice["message"]["content"], "logprobs": None}
+            for choice in response["choices"]
         ]
 
 
 class OpenaiAPIWrapper:
-    chat_engines = ["gpt-3.5-turbo", "gpt-4", "gpt-3.5-turbo-0316", "gpt-4-0613", "gpt-3.5-turbo-0613"]
+    chat_engines = ["gpt-3.5-turbo", "gpt-4", "gpt-3.5-turbo-0316", "gpt-4-0613", "gpt-3.5-turbo-0613", "deepseek-chat"]
 
     opensource_engines = ["self-vulcan-13b", "self-vicuna-13b", "togethercomputer/llama-2-70b"]
 
-    deepseek_engines = ["deepseek-ai/DeepSeek-R1-Distill-Qwen-32B", "Qwen/Qwen2.5-72B-Instruct","deepseek-r1-distill-llama-8b","deepseek-chat", "deepseek-coder", "deepseek-reasoner", "deepseek-v3", "deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-V2.5", "starlight/DeepSeek-R1-671B", "Qwen2.5-Coder-32B-Instruct", "Qwen2.5-Coder-32B-Instruct-GPTQ-Int4", "Qwen/Qwen2.5-32B-Instruct", "meta/llama3-70b-instruct",  "Pro/deepseek-ai/DeepSeek-R1"]
-
-    llama_engines = ["llama3.1-8b-instruct"]
     @staticmethod
     def get_api_wrapper(engine: str) -> BaseAPIWrapper:
         if any(k in engine for k in OpenaiAPIWrapper.chat_engines):
             return ChatGPTAPIWrapper
-        elif any(k in engine for k in OpenaiAPIWrapper.deepseek_engines):
-            return DeepseekAPIWrapper
         elif engine in OpenaiAPIWrapper.opensource_engines:
             return OpenSourceAPIWrapper
-        elif any(k in engine for k in OpenaiAPIWrapper.llama_engines):
-            return DashScopeAPIWrapper
         elif "claude" in engine:
             return AnthropicAPIWrapper
         else:
@@ -524,17 +316,17 @@ class OpenaiAPIWrapper:
 
     @staticmethod
     def get_first_response(response) -> Dict[str, Any]:
-        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response.model)
+        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response["model"])
         return api_wrapper.get_first_response(response)
 
     @staticmethod
     def get_majority_answer(response) -> Dict[str, Any]:
-        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response.model)
+        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response["model"])
         return api_wrapper.get_majority_answer(response)
 
     @staticmethod
     def get_all_responses(response) -> Dict[str, Any]:
-        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response.model)
+        api_wrapper = OpenaiAPIWrapper.get_api_wrapper(response["model"])
         return api_wrapper.get_all_responses(response)
 
 
@@ -762,8 +554,7 @@ def test_basic_chat_of_deepseek():
         stop_token=None,
         num_completions=1,
     )
-    # print(json.dumps(response, indent=2))
-    print(response.choices[0].message.content)
+    print(json.dumps(response, indent=2))
     print(OpenaiAPIWrapper.get_first_response(response))
 
 if __name__ == "__main__":
