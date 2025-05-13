@@ -60,7 +60,128 @@ Compiler Feedback:
 UnitTest Feedback:
 {unit_test_feedback}
 
+**Objective**: Generate a semantically equivalent vectorize-friendly version of `*_opt` using:  
+**Preservation Requirements**:  
+1. Function signature
 
+If the original value is used, e.g. a[i+1] is used for iteration i, a[i+1] should be stored in a temporary variable(use memcpy to store orign value) or used before updating a[i+1]
+If the updated value is used, e.g. a[i-1] is used for iteration i, a[i-1] should update before using it.
+
+**Possible Transformations**  
+Loop Splitting:  
+**Type 1 - Instruction Splitting**  
+   *When to use*:  
+   - Multiple independent statements exist within the loop body  
+   - Example pattern:  
+     ```c
+     for(i) {{ 
+       A[i] = ...;  // Independent group 1
+       B[i] = ...;  // Independent group 2 
+     }}
+     ```  
+   *Implementation*:  
+   ```c
+   for(i) {{ A[i] = ...; }}  // Split loop 1  
+   for(i) {{ B[i] = ...; }}  // Split loop 2  
+   ```  
+   *Validation*:  
+   - Total iteration count remains identical  
+   - Memory access order preserved across all arrays  
+
+**Type 2 - Iteration Range Splitting**  
+   *When to use*:  
+   - Loop contains phase-dependent patterns (e.g., mid-point update)  
+   - Vectorization blocked by conditional value changes  
+   - Example pattern:  
+     ```c
+     for(i=0; i<LEN; i++) a[i] = a[mid] + b[i];  
+     ```  
+   *Implementation*:  
+   ```c
+   // Phase 1: i=0~mid (pre-update)  
+   for(i=0; i<mid; i++) a[i] = a[mid] + b[i];  
+   // Mid-point update  
+   a[mid] = a[mid] + b[mid];  
+   // Phase 2: i=mid+1~end (post-update)  
+   for(i=mid+1; i<LEN; i++) a[i] = a[mid] + b[i];  
+   ```  
+   *Validation Checklist*:  
+   - Split boundaries cover original iteration range  
+   - No overlapping writes between split segments  
+
+Loop Reordering and Instruction Reordering:
+**Application Rules**:  
+   *Priority Patterns*:  
+   - Move loop-invariant computations upward  
+     ```c
+     // Before reorder:
+     a[i] = x + y;  // y is invariant
+     b[i] = y * z;
+     
+     // After reorder:
+     b[i] = y * z;  // y used earlier
+     a[i] = x + y;
+     ```  
+   - Solve loop dependency
+    ```c
+    // Before reorder:
+     a[i] = b[i-1] + y;  // y is invariant
+     b[i] = y * z;
+     
+     // After reorder:
+     b[i] = y * z;  // y used earlier
+     a[i] = b[i-1] + y;
+     // Before reorder:
+     a[i] = b[i-1] + y;  // y is invariant
+     b[i] = a[i+1] * z;
+     
+     // After reorder:
+     b[i] = a[i+1] * z;
+     a[i] = b[i-1] + y;
+     ```
+   - Cluster memory operations with similar addresses 
+
+Loop Distribution:
+**When to Apply**:  
+   - Multiple independent write targets in loop body  
+   - Example:  
+     ```c
+     // Original
+     for(i) {{
+       A[i] = ...;  // Writes to A
+       B[i] = ...;  // Writes to B (independent)
+     }}
+     
+     // Distributed
+     for(i) {{ A[i] = ...; }}  
+     for(i) {{ B[i] = ...; }}  
+     ```  
+   *Validation*:  
+   - Distributed loops must have identical iteration ranges  
+   - No interleaved access between distributed loops  
+
+Use temporary variable:
+Use temp variable to store result to avoid complex memory access
+
+Remove branching logic (if, else if, switch) from loops to enable automatic vectorization:
+Replace multi-way conditionals with arithmetic masking, ensuring uniform execution paths across iterations.
+**When to Apply**:  
+    - Example:  
+     ```c
+    // Original
+    if (cond1)  
+        x = value_A;  
+    else if (cond2)  
+        x = value_B;  
+    else  
+        x = value_C;
+    // Optimized  
+    x = cond1 * value_A + (cond2 && !cond1) * value_B + (!cond1 && !cond2) * value_C;  
+     ```
+
+If the access pattern involves using a[i-1] and updating a[i] within the same iteration, a dependency exists. Attempt to reorder the instructions to resolve this dependency.
+
+Improve the optimized code based on the preceding techniques and other optimization methods.
 
 Okay, let's use this feedback to refactor the code and encapsulate the generated code with ``c ``. Do not change the function head tailed with _opt. Only generate one optimized code. Do not output other code.Do not output orign code.
 
