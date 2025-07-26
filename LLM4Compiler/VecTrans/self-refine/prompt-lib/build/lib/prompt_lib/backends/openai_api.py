@@ -13,7 +13,6 @@ from prompt_lib.backends.self_hosted import OpenSourceAPIWrapper
 from prompt_lib.backends.anthropic_api import AnthropicAPIWrapper
 
 # openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_key = "sk-538d67bfd46e4e5b8f311424f3f01f22"
 
 client = httpx.Client(verify=False)
 
