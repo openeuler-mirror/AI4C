@@ -75,6 +75,10 @@ def extract_function_name(code):
         return match.group(1)
     return none
 
+def formalverify(src_name, tar_name):
+    alive_tv_cmd = ["alive-tv", src_name, tar_name]
+    res = subprocess.run(alive_tv_cmd, capture_output = True, text = True, check = True)
+    return res.stdout
 
 if __name__ == "__main__":
     # launch GPU2CPU translation agent
