@@ -80,6 +80,10 @@ def formalverify(src_name, tar_name):
     res = subprocess.run(alive_tv_cmd, capture_output = True, text = True, check = True)
     return res.stdout
 
+def save_array_to_excel(array, filename):
+    df = pd.DataFrame(array)
+    df.to_excel(f"{filename}.xlsx", index=False, header=False)
+
 if __name__ == "__main__":
     # launch GPU2CPU translation agent
     LaunchTrans()
