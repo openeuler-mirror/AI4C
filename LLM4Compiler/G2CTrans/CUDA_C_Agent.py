@@ -50,6 +50,15 @@ def LaunchTrans():
         except:
             print(f"LLM inference failed, jump to the next task: i = {i+1}")
 
+def compilecpp(source_cpp):
+    clang_path = os.getenv("CLANG_PATH", "clang++")
+    compile_cmd = [
+            clang_path,
+            "-O0",
+            "-S", "-emit-llvm",
+            source_cpp
+            ]
+    subprocess.run(compile_cmd, capture_output = True, text = True, check = Tr
 
 if __name__ == "__main__":
     # launch GPU2CPU translation agent
