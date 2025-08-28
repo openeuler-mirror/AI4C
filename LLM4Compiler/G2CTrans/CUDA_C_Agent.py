@@ -101,6 +101,71 @@ def save_array_to_excel(array, filename):
     df = pd.DataFrame(array)
     df.to_excel(f"{filename}.xlsx", index=False, header=False)
 
+
+def semantic_verification():
+    filename = "BabelTower/test/mono_cases.jsonl"
+    filepath = "./CUDA_C_Results/"
+    C_CUDA_Data = readdata(filename)
+    num_rows = len(C_CUDA_Data)
+    fileverify = "formalverification.log"
+    CorrectVeriCount = 0
+    FailCount = 0
+    filename_results = "formalVresults"
+    verifysummary = np.zeros((num_rows, 2))
+    verifysummary[:, 0] = np.arange(num_rows)
+    for i in range(num_rows):
+        print(f"============i: {i} ================")
+        filename_opt = os.path.join(filepath, f"{i}_cpp_opt.cpp")
+        with open(filename_opt, "r") as f:
+            pred_code = f.read()
+        #
+        ref_code = C_CUDA_Data[i]["cpp_code"]
+        pred_name = extract_function_name(pred_code)
+        ref_name = extract_function_name(ref_code)
+        if not pred_name or not ref_name:
+            print("Error: Failed to extract function name!")
+            continue
+        #
+        try:
+            new_ref_code = ref_code.replace(ref_name, pred_name)
+        except:
+            print(f"==========i: {i} failed, jump to the next one")
+            continue
+
+        filename_ref = os.path.join(filepath, f"{i}_cpp.cpp")
+        with open(filename_ref, "w") as f:
+            f.write(new_ref_code)
+        #
+        try:
+            compilecpp(filename_ref)
+            compilecpp(filename_opt)
+            src_name = str(i) + "_cpp.ll"
+            tar_name = str(i) + "_cpp_opt.ll"
+            verires = formalverify(src_name, tar_name)
+            print(f"===========i: {i}===========")
+            print(f"filename_ref: \n{ref_code}")
+            print(f"filename_opt: \n{pred_code}")
+            print(f"FormalVerification: \n{verires}")
+            with open(fileverify, "a") as f:
+                f.write(f"===========i: {i}=======\n{verires}\n\n")
+            if "1 correct transformations" in verires:
+                CorrectVeriCount += 1
+                verifysummary[i, 1] = 1
+            else:
+                verifysummary[i, 1] = -1
+        except:
+            print(f"i: {i} Failed due to compilation or alive2 verification, jump to the next!")
+            FailCount += 1
+            continue
+        print("=========================Transformation Summary=============")
+        print(f"Correct Formal: {CorrectVeriCount}/{num_rows}")
+        print(f"Failed Formal: {FailCount}/{num_rows}")
+    save_array_to_excel(verifysummary, filename_results)
+
 if __name__ == "__main__":
     # launch GPU2CPU translation agent
     LaunchTrans()
+    # verify the semantic equivalence of the translated CPU code with the reference CPU code.
+    semantic_verification()
+    #filepath = "./CUDA_C_Results/"
+    #deletefiles(filepath, 18)
