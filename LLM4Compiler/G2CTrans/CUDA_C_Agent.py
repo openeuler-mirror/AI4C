@@ -60,6 +60,22 @@ def compilecpp(source_cpp):
             ]
     subprocess.run(compile_cmd, capture_output = True, text = True, check = Tr
 
+
+def extract_function_name(code):
+    pattern = r'''
+        (?:[\w\s\*&const]+?\s+)
+        (?:(?:\w+::)*)
+        ([a-za-z_][a-za-z0-9_]*)
+        \s*\([^)]*\)\s*
+        \{
+    '''
+    match = re.search(pattern, code, re.verbose)
+
+    if match:
+        return match.group(1)
+    return none
+
+
 if __name__ == "__main__":
     # launch GPU2CPU translation agent
     LaunchTrans()
