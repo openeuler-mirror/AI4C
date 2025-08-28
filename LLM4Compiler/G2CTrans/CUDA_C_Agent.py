@@ -80,6 +80,23 @@ def formalverify(src_name, tar_name):
     res = subprocess.run(alive_tv_cmd, capture_output = True, text = True, check = True)
     return res.stdout
 
+def delete_files_by_pattern(directory, pattern):
+    full_pattern = os.path.join(directory, pattern)
+    files_to_delete = glob.glob(full_pattern)
+
+    if not files_to_delete:
+        print(f"No matched files: {full_pattern}")
+        return
+
+    for file_path in files_to_delete:
+        os.remove(file_path)
+        print("has deleted: {file_path}")
+
+def deletefiles(filepath, N):
+    for i in range(N):
+        delete_files_by_pattern(filepath, f"{i}_*.cpp")
+
+
 def save_array_to_excel(array, filename):
     df = pd.DataFrame(array)
     df.to_excel(f"{filename}.xlsx", index=False, header=False)
